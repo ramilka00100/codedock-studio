@@ -634,6 +634,7 @@
         <button class="context-menu-item" id="ctxSelectAll"><i class="fa-solid fa-check-double"></i> Выделить всё</button>
         <button class="context-menu-item" id="ctxCut"><i class="fa-solid fa-cut"></i> Вырезать</button>
         <button class="context-menu-item" id="ctxCopy"><i class="fa-regular fa-copy"></i> Копировать</button>
+        <button class="context-menu-item" id="ctxPaste"><i class="fa-regular fa-paste"></i> Вставить</button>
         <button class="context-menu-item" id="ctxClear" style="color:var(--danger);"><i class="fa-regular fa-trash-can" style="color:var(--danger);"></i> Очистить</button>
     </div>
 
@@ -965,6 +966,21 @@
         e.preventDefault();
         const text = codeEditor.value.substring(codeEditor.selectionStart, codeEditor.selectionEnd) || codeEditor.value;
         safeCopy(text);
+        hideContextMenu();
+    };
+
+    document.getElementById('ctxPaste').onpointerdown = async (e) => {
+        e.preventDefault();
+        try {
+            const text = await navigator.clipboard.readText();
+            const start = codeEditor.selectionStart;
+            const end = codeEditor.selectionEnd;
+            codeEditor.value = codeEditor.value.substring(0, start) + text + codeEditor.value.substring(end);
+            codeEditor.selectionStart = codeEditor.selectionEnd = start + text.length;
+            codeEditor.dispatchEvent(new Event('input'));
+        } catch (err) {
+            console.log('Не удалось прочитать буфер: ' + err.message + '. Используй долгий тап → «Вставить».');
+        }
         hideContextMenu();
     };
 
