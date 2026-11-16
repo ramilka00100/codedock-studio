@@ -144,6 +144,7 @@
             color: var(--text-muted);
             white-space: nowrap;
             cursor: pointer;
+            position: relative;
         }
 
         .tab-chip.active {
@@ -152,7 +153,24 @@
             background-color: rgba(139, 92, 246, 0.14);
         }
 
-        /* --- ТЕЛО РЕДАКТОРА --- */
+        .tab-close {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            margin-left: 2px;
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            transition: all 0.15s;
+        }
+
+        .tab-close:hover, .tab-close:active {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--danger);
+        }
+
         .editor-body {
             flex: 1;
             display: flex;
@@ -162,10 +180,9 @@
             background-color: var(--bg-main);
         }
 
-        /* Панель действий с кнопками */
         .editor-action-bar {
             display: flex;
-            justify-content: space-between; /* Разносим левую и правую группы */
+            justify-content: space-between;
             align-items: center;
             padding: 8px 12px;
             background-color: var(--bg-panel);
@@ -197,7 +214,6 @@
             transform: scale(0.96);
         }
 
-        /* Кнопки отмены/возврата (иконки) */
         .btn-icon {
             padding: 0;
             width: 34px;
@@ -548,7 +564,7 @@
         }
 
         .custom-context-menu {
-            position: absolute;
+            position: fixed;
             background-color: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 12px;
@@ -556,7 +572,7 @@
             display: none;
             flex-direction: column;
             padding: 6px;
-            z-index: 1000;
+            z-index: 9999;
             min-width: 160px;
             backdrop-filter: blur(8px);
         }
@@ -736,7 +752,6 @@
     </header>
 
     <main class="editor-body">
-        <!-- Панель действий -->
         <div class="editor-action-bar">
             <div class="action-group">
                 <button class="btn-action btn-icon" id="undoBtn" title="Отменить">
@@ -792,14 +807,6 @@
                 <button class="btn-secondary" id="closeDrawerBtn">Закрыть</button>
             </div>
         </aside>
-
-        <div class="custom-context-menu" id="customContextMenu">
-            <button class="context-menu-item" id="ctxSelectAll"><i class="fa-solid fa-check-double"></i> Выделить всё</button>
-            <button class="context-menu-item" id="ctxCut"><i class="fa-solid fa-cut"></i> Вырезать</button>
-            <button class="context-menu-item" id="ctxCopy"><i class="fa-regular fa-copy"></i> Копировать</button>
-            <button class="context-menu-item" id="ctxPaste"><i class="fa-regular fa-paste"></i> Вставить</button>
-            <button class="context-menu-item" id="ctxClear" style="color:var(--danger);"><i class="fa-regular fa-trash-can" style="color:var(--danger);"></i> Очистить</button>
-        </div>
     </main>
 
     <div class="symbol-bar" id="symbolBar">
@@ -827,6 +834,14 @@
         </div>
         <iframe class="preview-frame" id="previewFrame" sandbox="allow-scripts allow-modals"></iframe>
     </div>
+</div>
+
+<div class="custom-context-menu" id="customContextMenu">
+    <button class="context-menu-item" id="ctxSelectAll"><i class="fa-solid fa-check-double"></i> Выделить всё</button>
+    <button class="context-menu-item" id="ctxCut"><i class="fa-solid fa-cut"></i> Вырезать</button>
+    <button class="context-menu-item" id="ctxCopy"><i class="fa-regular fa-copy"></i> Копировать</button>
+    <button class="context-menu-item" id="ctxPaste"><i class="fa-regular fa-paste"></i> Вставить</button>
+    <button class="context-menu-item" id="ctxClear" style="color:var(--danger);"><i class="fa-regular fa-trash-can" style="color:var(--danger);"></i> Очистить</button>
 </div>
 
 <div class="modal-overlay" id="createModal">
@@ -921,6 +936,12 @@
 
     let fileSystem = safeParse(localStorage.getItem('codedock_tree_v2'), null) || JSON.parse(JSON.stringify(DEFAULT_PROJECT));
     let activeFileId = localStorage.getItem('codedock_active_v2') || '1';
+    let openFileIds = safeParse(localStorage.getItem('codedock_open_tabs'), null);
+    
+    if (!openFileIds || !Array.isArray(openFileIds) || openFileIds.length === 0) {
+        openFileIds = activeFileId ? [activeFileId] : [];
+    }
+
     let creatingType = 'file';
     let editingItemId = null;
     let searchQuery = '';
@@ -956,7 +977,8 @@
     function saveState() {
         try {
             localStorage.setItem('codedock_tree_v2', JSON.stringify(fileSystem));
-            localStorage.setItem('codedock_active_v2', activeFileId);
+            localStorage.setItem('codedock_active_v2', activeFileId || '');
+            localStorage.setItem('codedock_open_tabs', JSON.stringify(openFileIds));
         } catch (e) {}
     }
 
@@ -1009,24 +1031,66 @@
 
     function renderEditorAndTabs() {
         const allFiles = getAllFiles(fileSystem);
+        
+        // Очищаем openFileIds от несуществующих файлов
+        openFileIds = openFileIds.filter(id => allFiles.some(f => f.id === id));
+        
         let currentFile = findItemById(fileSystem, activeFileId);
-        if (!currentFile && allFiles.length > 0) {
-            currentFile = allFiles[0];
-            activeFileId = currentFile.id;
+        
+        // Если активного файла нет, но есть открытые вкладки — берем первую
+        if (!currentFile && openFileIds.length > 0) {
+            activeFileId = openFileIds[0];
+            currentFile = findItemById(fileSystem, activeFileId);
+        } else if (openFileIds.length === 0) {
+            activeFileId = null;
+            currentFile = null;
         }
+
         tabsBar.innerHTML = '';
-        allFiles.forEach(file => {
+        openFileIds.forEach(id => {
+            const file = allFiles.find(f => f.id === id);
+            if (!file) return;
+
             const tab = document.createElement('div');
             tab.className = `tab-chip ${file.id === activeFileId ? 'active' : ''}`;
-            tab.innerHTML = `${getFileIcon(file.name)}<span>${escapeHtml(file.name)}</span>`;
-            tab.onclick = () => {
+            tab.innerHTML = `
+                ${getFileIcon(file.name)}
+                <span>${escapeHtml(file.name)}</span>
+                <div class="tab-close" title="Закрыть"><i class="fa-solid fa-xmark"></i></div>
+            `;
+
+            // Клик по самой вкладке
+            tab.addEventListener('click', (e) => {
+                if (e.target.closest('.tab-close')) return;
                 activeFileId = file.id;
                 saveState();
                 renderEditorAndTabs();
                 renderTree();
-            };
+            });
+
+            // Клик по крестику (Автосохранение при закрытии)
+            tab.querySelector('.tab-close').addEventListener('click', (e) => {
+                e.stopPropagation();
+                
+                // Принудительно забираем текст из редактора и сохраняем в файл
+                const currentFileData = findItemById(fileSystem, activeFileId);
+                if (currentFileData && !codeEditor.disabled) {
+                    currentFileData.content = codeEditor.value;
+                }
+                saveState();
+                
+                openFileIds = openFileIds.filter(fId => fId !== file.id);
+                if (activeFileId === file.id) {
+                    activeFileId = openFileIds.length > 0 ? openFileIds[0] : null;
+                    lastRenderedFileId = null; // Принудительное обновление
+                }
+                saveState();
+                renderEditorAndTabs();
+            });
+
             tabsBar.appendChild(tab);
         });
+
         if (currentFile) {
             codeEditor.disabled = false;
             if (lastRenderedFileId !== currentFile.id) {
@@ -1037,7 +1101,7 @@
         } else {
             codeEditor.disabled = true;
             codeEditor.value = '';
-            codeEditor.placeholder = '// Создайте новый файл в меню слева';
+            codeEditor.placeholder = '// Файл не выбран';
             lastRenderedFileId = null;
         }
         updateLineNumbers();
@@ -1103,6 +1167,8 @@
     const saveBtn = document.getElementById('saveProjectBtn');
     const originalSaveHTML = saveBtn.innerHTML;
     saveBtn.addEventListener('click', () => {
+        const cur = findItemById(fileSystem, activeFileId);
+        if (cur) cur.content = codeEditor.value;
         saveState();
         saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Сохранено';
         saveBtn.style.color = 'var(--success)';
@@ -1231,8 +1297,10 @@
         const rect = customContextMenu.getBoundingClientRect();
         let x = clientX;
         let y = clientY;
+        
         if (x + rect.width > window.innerWidth - 10) x = window.innerWidth - rect.width - 10;
         if (y + rect.height > window.innerHeight - 10) y = window.innerHeight - rect.height - 10;
+        
         customContextMenu.style.left = `${Math.max(10, x)}px`;
         customContextMenu.style.top = `${Math.max(10, y)}px`;
     }
@@ -1468,9 +1536,11 @@
             });
         }
         fileSystem = removeFrom(fileSystem);
+        
+        openFileIds = openFileIds.filter(fId => fId !== id);
+
         if (wasActive) {
-            const remaining = getAllFiles(fileSystem);
-            activeFileId = remaining.length ? remaining[0].id : '';
+            activeFileId = openFileIds.length ? openFileIds[0] : '';
             lastRenderedFileId = null;
         }
         saveState();
@@ -1564,6 +1634,7 @@
             }
             if (creatingType === 'file') {
                 activeFileId = newItem.id;
+                if (!openFileIds.includes(activeFileId)) openFileIds.push(activeFileId);
                 lastRenderedFileId = null;
                 closeDrawer();
             }
@@ -1642,6 +1713,7 @@
                             return;
                         }
                         activeFileId = item.id;
+                        if (!openFileIds.includes(activeFileId)) openFileIds.push(activeFileId);
                         saveState();
                         renderAll();
                         closeDrawer();
