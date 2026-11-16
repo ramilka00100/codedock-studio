@@ -1458,17 +1458,50 @@
         if (cmView) cmView.focus();
     }
 
+    // Возвращает { haystack, needle, lengthSafe } — строки, в которых надо искать,
+    // плюс признак, что индексы совпадают с исходными (для posFromIndex).
+    function buildSearchStrings(rawQuery, rawText) {
+        // 1) NFC-нормализация — лечит й/ё в разложенной форме (и+◌̆ / е+◌̈).
+        //    Применяем только если длины не изменились, иначе индексы «поедут».
+        let query = rawQuery;
+        let text = rawText;
+        try {
+            if (typeof rawQuery.normalize === 'function') {
+                const nq = rawQuery.normalize('NFC');
+                const nt = rawText.normalize('NFC');
+                if (nq.length === rawQuery.length && nt.length === rawText.length) {
+                    query = nq;
+                    text = nt;
+                }
+            }
+        } catch (e) { /* очень старый браузер — работаем с сырыми строками */ }
+
+        // 2) Регистронезависимый поиск — toLowerCase сохраняет длину
+        //    для латиницы и кириллицы (типичный случай).
+        const lowerQuery = query.toLowerCase();
+        const lowerText = text.toLowerCase();
+        if (lowerQuery.length === query.length && lowerText.length === text.length) {
+            return { haystack: lowerText, needle: lowerQuery, lengthSafe: true, queryLength: query.length };
+        }
+        // 3) Fallback: редкие языки (İ, ß и т.п.), где toLowerCase меняет длину.
+        return { haystack: text, needle: query, lengthSafe: false, queryLength: query.length };
+    }
+
     function computeMatches() {
-        const query = searchInput.value;
-        const text = getEditorContent();
-        if (!query) return [];
+        const rawQuery = searchInput.value;
+        const rawText = getEditorContent();
+        if (!rawQuery) return [];
+
+        const { haystack, needle, queryLength } = buildSearchStrings(rawQuery, rawText);
+        if (!needle) return [];
+
         const matches = [];
         let index = 0;
-        while (index <= text.length) {
-            const found = text.indexOf(query, index);
+        while (index <= haystack.length) {
+            const found = haystack.indexOf(needle, index);
             if (found === -1) break;
-            matches.push({ start: found, end: found + query.length });
-            index = found + Math.max(1, query.length);
+            matches.push({ start: found, end: found + queryLength });
+            index = found + Math.max(1, needle.length);
         }
         return matches;
     }
@@ -1511,16 +1544,29 @@
     }
 
     function replaceAllMatches() {
-        const query = searchInput.value;
-        if (!query) return;
+        const rawQuery = searchInput.value;
+        if (!rawQuery) return;
+        const matches = computeMatches();
+        if (!matches.length) return;
+
+        // Заменяем по позициям, а не split/join — это единственный корректный
+        // способ при регистронезависимом поиске (иначе можно сломать регистр
+        // или заменить не то, что подсвечено).
         const value = getEditorContent();
-        const count = computeMatches().length;
-        if (!count) return;
-        const newValue = value.split(query).join(replaceInput.value);
-        setEditorContent(newValue);
+        const replacement = replaceInput.value;
+        let result = '';
+        let lastEnd = 0;
+        for (const match of matches) {
+            result += value.slice(lastEnd, match.start);
+            result += replacement;
+            lastEnd = match.end;
+        }
+        result += value.slice(lastEnd);
+
+        setEditorContent(result);
         saveNow();
         refreshSearchResults();
-        toast(`Заменено вхождений: ${count}`, { type: 'success' });
+        toast(`Заменено вхождений: ${matches.length}`, { type: 'success' });
     }
 
     $('searchBtn').addEventListener('click', () => (searchPanel.classList.contains('open') ? closeSearch() : openSearch()));
