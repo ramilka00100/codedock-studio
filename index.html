@@ -16,8 +16,6 @@
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-180.png">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Highlight.js Тема -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     
     <style>
@@ -212,7 +210,7 @@
         .btn-icon:active { border-color: var(--accent); color: var(--accent); }
         .btn-run { background-color: var(--accent); color: #fff; box-shadow: 0 2px 8px var(--accent-glow); }
 
-        /* --- ОБЕРТКА РЕДАКТОРА С ПОДСВЕТКОЙ --- */
+        /* --- ОБЕРТКА РЕДАКТОРА --- */
         .editor-content { flex: 1; display: flex; position: relative; overflow: hidden; }
 
         .line-numbers {
@@ -241,7 +239,7 @@
             overflow: hidden;
         }
 
-        /* Слой с подсветкой (фон) */
+        /* Слой подсветки (фон) */
         .highlight-layer {
             position: absolute;
             top: 0;
@@ -263,6 +261,7 @@
         }
 
         .highlight-layer code {
+            display: block; /* Важно для transform */
             font-family: inherit;
             font-size: inherit;
             line-height: inherit;
@@ -270,7 +269,7 @@
             padding: 0;
         }
 
-        /* Прозрачная текстовая область (слой ввода) */
+        /* Слой ввода (прозрачный) */
         .code-textarea {
             position: absolute;
             top: 0;
@@ -279,6 +278,7 @@
             height: 100%;
             background: transparent;
             color: transparent;
+            -webkit-text-fill-color: transparent; /* Надежное скрытие текста на мобильных */
             caret-color: var(--accent);
             border: none;
             outline: none;
@@ -295,14 +295,15 @@
         }
 
         .code-textarea::selection {
-            background-color: rgba(139, 92, 246, 0.4);
-            color: transparent;
+            background-color: rgba(139, 92, 246, 0.3);
         }
 
-        .code-textarea.wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
-        .code-textarea.wrap + .highlight-layer { white-space: pre-wrap; overflow-wrap: anywhere; }
-
-        /* --------------------------------------- */
+        /* Перенос строк */
+        .code-wrapper.wrap .code-textarea,
+        .code-wrapper.wrap .highlight-layer {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
 
         .edge-swipe-area { position: absolute; left: 0; top: 0; bottom: 0; width: 12px; z-index: 15; touch-action: pan-y; }
 
@@ -877,7 +878,7 @@
 
         <div class="editor-content">
             <div class="line-numbers" id="lineNumbers" aria-hidden="true"></div>
-            <div class="code-wrapper">
+            <div class="code-wrapper" id="codeWrapper">
                 <!-- Слой подсветки -->
                 <pre class="highlight-layer" aria-hidden="true"><code id="highlighting" class="hljs"></code></pre>
                 <!-- Слой ввода -->
@@ -1051,15 +1052,11 @@
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 <input type="file" id="importFile" accept=".json,application/json" class="hidden-file-input">
 
-<!-- Highlight.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
 <script>
     'use strict';
 
-    /* ============================================================
-       1. Утилиты
-       ============================================================ */
     const APP_VERSION = '3.0.0';
     const STORAGE = {
         current: 'codedock_v3',
@@ -1081,95 +1078,43 @@
         }[c]));
     }
 
-    function clone(value) {
-        return JSON.parse(JSON.stringify(value));
-    }
-
-    function safeParse(json) {
-        try { return JSON.parse(json); } catch (e) { return null; }
-    }
-
+    function clone(value) { return JSON.parse(JSON.stringify(value)); }
+    function safeParse(json) { try { return JSON.parse(json); } catch (e) { return null; } }
     function genId() {
         if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
         return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     }
-
-    function formatTime(date = new Date()) {
-        return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-    }
-
+    function formatTime(date = new Date()) { return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); }
     function debounce(fn, wait) {
         let timer = null;
-        const wrapped = (...args) => {
-            clearTimeout(timer);
-            timer = setTimeout(() => fn(...args), wait);
-        };
-        wrapped.flush = (...args) => {
-            clearTimeout(timer);
-            fn(...args);
-        };
+        const wrapped = (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
+        wrapped.flush = (...args) => { clearTimeout(timer); fn(...args); };
         return wrapped;
     }
 
-    /* ============================================================
-       2. Модель проекта: загрузка, проверка, сохранение
-       ============================================================ */
     const DEFAULT_PROJECT = [
-        {
-            id: 'demo-index',
-            name: 'index.html',
-            type: 'file',
-            content: '<!DOCTYPE html>\n<html lang="ru">\n<head>\n  <meta charset="UTF-8">\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <div class="card">\n    <h1>CodeDock IDE</h1>\n    <p>Нажми кнопку ниже для проверки JS</p>\n    <button onclick="sayHi()">Нажми меня</button>\n  </div>\n  <script src="script.js"><\/script>\n</body>\n</html>',
-        },
-        {
-            id: 'demo-style',
-            name: 'style.css',
-            type: 'file',
-            content: 'body {\n  margin: 0;\n  min-height: 100vh;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  background: #13131a;\n  color: #fff;\n  font-family: sans-serif;\n}\n.card {\n  background: #1f1f2c;\n  padding: 24px;\n  border-radius: 16px;\n  text-align: center;\n  border: 1px solid #8b5cf6;\n}\nbutton {\n  background: #8b5cf6;\n  color: #fff;\n  border: none;\n  padding: 10px 18px;\n  border-radius: 10px;\n  font-size: 16px;\n  margin-top: 10px;\n}',
-        },
-        {
-            id: 'demo-script',
-            name: 'script.js',
-            type: 'file',
-            content: 'function sayHi() {\n  console.log("Привет из CodeDock!");\n  console.warn("Это предупреждение");\n  console.error("А это тестовая ошибка");\n}',
-        },
-        {
-            id: 'demo-data',
-            name: 'data',
-            type: 'folder',
-            isOpen: true,
-            children: [
-                { id: 'demo-json', name: 'data.json', type: 'file', content: '{\n  "app": "CodeDock",\n  "version": "3.0"\n}' },
-            ],
-        },
+        { id: 'demo-index', name: 'index.html', type: 'file', content: '<!DOCTYPE html>\n<html lang="ru">\n<head>\n  <meta charset="UTF-8">\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <div class="card">\n    <h1>CodeDock IDE</h1>\n    <p>Нажми кнопку ниже для проверки JS</p>\n    <button onclick="sayHi()">Нажми меня</button>\n  </div>\n  <script src="script.js"><\/script>\n</body>\n</html>' },
+        { id: 'demo-style', name: 'style.css', type: 'file', content: 'body {\n  margin: 0;\n  min-height: 100vh;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  background: #13131a;\n  color: #fff;\n  font-family: sans-serif;\n}\n.card {\n  background: #1f1f2c;\n  padding: 24px;\n  border-radius: 16px;\n  text-align: center;\n  border: 1px solid #8b5cf6;\n}\nbutton {\n  background: #8b5cf6;\n  color: #fff;\n  border: none;\n  padding: 10px 18px;\n  border-radius: 10px;\n  font-size: 16px;\n  margin-top: 10px;\n}' },
+        { id: 'demo-script', name: 'script.js', type: 'file', content: 'function sayHi() {\n  console.log("Привет из CodeDock!");\n  console.warn("Это предупреждение");\n  console.error("А это тестовая ошибка");\n}' },
+        { id: 'demo-data', name: 'data', type: 'folder', isOpen: true, children: [{ id: 'demo-json', name: 'data.json', type: 'file', content: '{\n  "app": "CodeDock",\n  "version": "3.0"\n}' }] },
     ];
 
-    /** Проверяет форму дерева; возвращает нормализованное дерево или null. */
     function normalizeTree(input) {
         const tree = Array.isArray(input) ? input : (input && Array.isArray(input.tree) ? input.tree : null);
         if (!tree) return null;
-
         const seen = new Set();
         const walk = (items) => {
             if (!Array.isArray(items)) return null;
             const result = [];
             for (const item of items) {
                 if (!item || typeof item !== 'object') return null;
-                
                 let name = typeof item.name === 'string' ? item.name.trim() : '';
                 if (!name) return null;
-                
                 name = name.replace(/[/\\]/g, '-');
-
                 const type = item.type === 'folder' ? 'folder' : 'file';
-                const node = {
-                    id: typeof item.id === 'string' && item.id ? item.id : genId(),
-                    name,
-                    type,
-                };
+                const node = { id: typeof item.id === 'string' && item.id ? item.id : genId(), name, type };
                 if (seen.has(node.id)) node.id = genId();
                 seen.add(node.id);
-
                 if (type === 'folder') {
                     const children = walk(item.children || []);
                     if (children === null) return null;
@@ -1186,11 +1131,7 @@
     }
 
     function readStoredProject() {
-        const attempts = [
-            [STORAGE.current, 'current'],
-            [STORAGE.backup, 'backup'],
-            [STORAGE.legacyTree, 'legacy'],
-        ];
+        const attempts = [[STORAGE.current, 'current'], [STORAGE.backup, 'backup'], [STORAGE.legacyTree, 'legacy']];
         for (const [key, source] of attempts) {
             const raw = localStorage.getItem(key);
             if (!raw) continue;
@@ -1206,25 +1147,14 @@
     let openFileIds = [];
     let lastSavedAt = null;
     let lastSavedTreeHash = '';
-    let storageBroken = false;
 
     function loadProject() {
         let stored = null;
-        try {
-            stored = readStoredProject();
-        } catch (e) {
-            stored = null;
-        }
-
+        try { stored = readStoredProject(); } catch (e) { stored = null; }
         if (stored) {
             fileSystem = stored.tree;
-            if (stored.source === 'backup') {
-                toast('Основное хранилище повреждено — загружена резервная копия.', { type: 'warn', duration: 6000 });
-            } else if (stored.source === 'legacy') {
-                toast('Проект перенесён со старой версии.', { type: 'success' });
-            }
-        } else if (localStorage.getItem(STORAGE.legacyTree)) {
-            toast('Не удалось прочитать сохранённый проект — открыт демо-проект. Старые данные в localStorage не удалены.', { type: 'error', duration: 9000 });
+            if (stored.source === 'backup') toast('Загружена резервная копия.', { type: 'warn' });
+            if (stored.source === 'legacy') toast('Проект перенесен.', { type: 'success' });
         }
 
         const ui = safeParse(localStorage.getItem(STORAGE.ui) || 'null') || {};
@@ -1232,17 +1162,11 @@
         const savedActive = ui.active || localStorage.getItem(STORAGE.legacyActive);
         const savedTabs = Array.isArray(ui.tabs) ? ui.tabs : safeParse(localStorage.getItem(STORAGE.legacyTabs) || 'null');
 
-        openFileIds = (Array.isArray(savedTabs) ? savedTabs : [])
-            .filter((id) => files.some((file) => file.id === id))
-            .slice(0, MAX_TABS);
+        openFileIds = (Array.isArray(savedTabs) ? savedTabs : []).filter((id) => files.some((file) => file.id === id)).slice(0, MAX_TABS);
 
-        if (savedActive && files.some((file) => file.id === savedActive)) {
-            activeFileId = savedActive;
-        } else if (openFileIds.length) {
-            activeFileId = openFileIds[0];
-        } else if (files.length) {
-            activeFileId = files[0].id;
-        }
+        if (savedActive && files.some((file) => file.id === savedActive)) activeFileId = savedActive;
+        else if (openFileIds.length) activeFileId = openFileIds[0];
+        else if (files.length) activeFileId = files[0].id;
 
         if (activeFileId && !openFileIds.includes(activeFileId)) openFileIds.push(activeFileId);
         lastSavedTreeHash = hashTree(fileSystem);
@@ -1251,9 +1175,7 @@
     function hashTree(tree) {
         const json = JSON.stringify(tree);
         let hash = 0;
-        for (let i = 0; i < json.length; i += 1) {
-            hash = (hash * 31 + json.charCodeAt(i)) | 0;
-        }
+        for (let i = 0; i < json.length; i += 1) hash = (hash * 31 + json.charCodeAt(i)) | 0;
         return String(hash);
     }
 
@@ -1266,9 +1188,7 @@
     function saveNow(force = false) {
         const serialized = JSON.stringify({ v: 3, tree: fileSystem, active: activeFileId, tabs: openFileIds, savedAt: Date.now() });
         const digest = hashTree(fileSystem);
-        if (!force && digest === lastSavedTreeHash && serialized.length > 0) {
-            return true;
-        }
+        if (!force && digest === lastSavedTreeHash && serialized.length > 0) return true;
 
         setSaveStatus('saving', '<i class="fa-solid fa-circle-notch fa-spin"></i> Сохранение…');
         try {
@@ -1281,28 +1201,13 @@
             setSaveStatus('saved', `<i class="fa-solid fa-check"></i> Сохранено в ${formatTime(lastSavedAt)}`);
             return true;
         } catch (error) {
-            const isQuota = error && (error.name === 'QuotaExceededError' || error.code === 22 || error.code === 1014);
             setSaveStatus('error', '<i class="fa-solid fa-triangle-exclamation"></i> Не сохранено');
-            toast(
-                isQuota
-                    ? 'В браузере закончилось место для проекта. Выгрузите ZIP или уменьшите файлы.'
-                    : `Не удалось сохранить: ${error.message}`,
-                { type: 'error', duration: 9000, action: { label: 'Скачать ZIP', onClick: exportZip } },
-            );
+            toast(`Ошибка сохранения: ${error.message}`, { type: 'error' });
             return false;
         }
     }
-
     const scheduleSave = debounce(() => saveNow(), SAVE_DEBOUNCE);
 
-    window.addEventListener('pagehide', () => scheduleSave.flush());
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden) scheduleSave.flush();
-    });
-
-    /* ============================================================
-       3. Операции над деревом
-       ============================================================ */
     function findItemById(items, id) {
         for (const item of items) {
             if (item.id === id) return item;
@@ -1340,18 +1245,13 @@
     }
 
     function nameExists(parentId, name, ignoreId) {
-        return siblingsOf(parentId).some(
-            (item) => item.name.toLowerCase() === name.toLowerCase() && item.id !== ignoreId,
-        );
+        return siblingsOf(parentId).some((item) => item.name.toLowerCase() === name.toLowerCase() && item.id !== ignoreId);
     }
 
     function removeItemById(id) {
         const remove = (items, parentId) => {
             const index = items.findIndex((item) => item.id === id);
-            if (index >= 0) {
-                const [removed] = items.splice(index, 1);
-                return { parentId, index, removed };
-            }
+            if (index >= 0) { const [removed] = items.splice(index, 1); return { parentId, index, removed }; }
             for (const item of items) {
                 if (item.children) {
                     const found = remove(item.children, item.id);
@@ -1364,19 +1264,13 @@
     }
 
     function insertItem(item, parentId, index) {
-        if (!parentId) {
-            fileSystem.splice(index, 0, item);
-            return true;
-        }
+        if (!parentId) { fileSystem.splice(index, 0, item); return true; }
         const parent = findItemById(fileSystem, parentId);
         if (!parent || !parent.children) return false;
         parent.children.splice(index, 0, item);
         return true;
     }
 
-    /* ============================================================
-       4. Тосты и подтверждения
-       ============================================================ */
     function toast(message, options = {}) {
         const container = $('toastContainer');
         const node = document.createElement('div');
@@ -1384,24 +1278,15 @@
         const text = document.createElement('span');
         text.textContent = message;
         node.appendChild(text);
-
         let timer = null;
-        const remove = () => {
-            clearTimeout(timer);
-            node.remove();
-        };
-
+        const remove = () => { clearTimeout(timer); node.remove(); };
         if (options.action) {
             const button = document.createElement('button');
             button.type = 'button';
             button.textContent = options.action.label;
-            button.addEventListener('click', () => {
-                options.action.onClick();
-                remove();
-            });
+            button.addEventListener('click', () => { options.action.onClick(); remove(); });
             node.appendChild(button);
         }
-
         container.appendChild(node);
         timer = setTimeout(remove, options.duration || 4200);
         return remove;
@@ -1414,7 +1299,6 @@
             $('confirmText').textContent = text;
             modal.classList.add('open');
             pushGuard();
-
             const cleanup = (result) => {
                 modal.classList.remove('open');
                 $('confirmOk').removeEventListener('click', onOk);
@@ -1428,11 +1312,10 @@
         });
     }
 
-    /* ============================================================
-       5. Редактор: вкладки, содержимое, номера строк, подсветка
-       ============================================================ */
+    // --- РЕДАКТОР ---
     const codeEditor = $('codeEditor');
     const highlighting = $('highlighting');
+    const codeWrapper = $('codeWrapper');
     const lineNumbers = $('lineNumbers');
     const tabsBar = $('tabsBar');
     const fileTreeEl = $('fileTree');
@@ -1462,7 +1345,6 @@
         if (stack.undo.length > HISTORY_LIMIT) stack.undo.shift();
         stack.redo.length = 0;
     }
-
     const scheduleHistorySnapshot = debounce(pushHistorySnapshot, 450);
 
     function applyHistory(direction) {
@@ -1471,14 +1353,12 @@
         const from = direction === 'undo' ? stack.undo : stack.redo;
         const to = direction === 'undo' ? stack.redo : stack.undo;
         if (!from.length) return;
-
         const current = codeEditor.value;
         const next = from.pop();
         to.push(current);
         applyingHistory = true;
         codeEditor.value = next;
         applyingHistory = false;
-
         const file = findItemById(fileSystem, activeFileId);
         if (file) file.content = next;
         saveNow();
@@ -1497,7 +1377,7 @@
             renderedLineCount = 0;
             lineNumbers.innerHTML = '';
             linesCountText.textContent = 'Строк: 0';
-            highlighting.textContent = '';
+            highlighting.innerHTML = '';
             highlighting.className = 'hljs';
             return;
         }
@@ -1542,20 +1422,19 @@
         lineNumbers.scrollTop = codeEditor.scrollTop;
     }
 
-    // --- ПОДСВЕТКА СИНТАКСИСА ---
+    // --- ПОДСВЕТКА И СИНХРОНИЗАЦИЯ ---
     function updateHighlight() {
         const file = findItemById(fileSystem, activeFileId);
         if (!file) return;
 
         const ext = file.name.split('.').pop().toLowerCase();
         let lang = 'plaintext';
-        if (ext === 'html') lang = 'xml'; // highlight.js использует xml для html
+        if (ext === 'html') lang = 'xml';
         else if (ext === 'css') lang = 'css';
         else if (ext === 'js') lang = 'javascript';
         else if (ext === 'json') lang = 'json';
 
         let code = codeEditor.value;
-        // Добавляем перенос строки, чтобы последняя пустая строка не "схлопывалась"
         if (code.endsWith('\n')) code += ' ';
 
         try {
@@ -1567,11 +1446,11 @@
             highlighting.className = 'hljs';
         }
 
-        // Синхронизация скролла
-        highlighting.scrollTop = codeEditor.scrollTop;
-        highlighting.scrollLeft = codeEditor.scrollLeft;
+        // Синхронизация через transform (лучший способ для скролла)
+        requestAnimationFrame(() => {
+            highlighting.style.transform = `translate(${-codeEditor.scrollLeft}px, ${-codeEditor.scrollTop}px)`;
+        });
     }
-    // ----------------------------
 
     function renderTabs() {
         const files = getAllFiles(fileSystem);
@@ -1646,9 +1525,7 @@
         renderTree();
     }
 
-    /* ============================================================
-       6. Правки в редакторе: отступы, скобки, таб, история
-       ============================================================ */
+    // --- ПРАВКИ ---
     const BRACKET_PAIRS = { '{': '}', '(': ')', '[': ']', '"': '"', "'": "'", '`': '`' };
     const CLOSING_CHARS = new Set(Object.values(BRACKET_PAIRS));
 
@@ -1658,10 +1535,7 @@
         const match = line.match(/^[ \t]*/);
         return match ? match[0] : '';
     }
-
-    function indentUnit() {
-        return ' '.repeat(uiSettings.tabSize);
-    }
+    function indentUnit() { return ' '.repeat(uiSettings.tabSize); }
 
     function insertText(text) {
         const start = codeEditor.selectionStart;
@@ -1732,36 +1606,13 @@
         if (codeEditor.disabled) return;
         const mod = event.ctrlKey || event.metaKey;
 
-        if (mod && event.key.toLowerCase() === 's') {
-            event.preventDefault();
-            saveNow(true);
-            return;
-        }
-        if (mod && event.key.toLowerCase() === 'f') {
-            event.preventDefault();
-            openSearch();
-            return;
-        }
-        if (mod && event.key.toLowerCase() === 'z' && !event.shiftKey) {
-            event.preventDefault();
-            applyHistory('undo');
-            return;
-        }
-        if (mod && (event.key.toLowerCase() === 'y' || (event.key.toLowerCase() === 'z' && event.shiftKey))) {
-            event.preventDefault();
-            applyHistory('redo');
-            return;
-        }
-        if (event.key === 'Tab') {
-            event.preventDefault();
-            indentSelection(event.shiftKey);
-            return;
-        }
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            autoIndentEnter();
-            return;
-        }
+        if (mod && event.key.toLowerCase() === 's') { event.preventDefault(); saveNow(true); return; }
+        if (mod && event.key.toLowerCase() === 'f') { event.preventDefault(); openSearch(); return; }
+        if (mod && event.key.toLowerCase() === 'z' && !event.shiftKey) { event.preventDefault(); applyHistory('undo'); return; }
+        if (mod && (event.key.toLowerCase() === 'y' || (event.key.toLowerCase() === 'z' && event.shiftKey))) { event.preventDefault(); applyHistory('redo'); return; }
+        if (event.key === 'Tab') { event.preventDefault(); indentSelection(event.shiftKey); return; }
+        if (event.key === 'Enter') { event.preventDefault(); autoIndentEnter(); return; }
+        
         if (event.key === 'Backspace') {
             const start = codeEditor.selectionStart;
             const end = codeEditor.selectionEnd;
@@ -1777,11 +1628,9 @@
             }
             return;
         }
-        if (event.key === 'Escape') {
-            hideContextMenu();
-            closeSearch();
-            return;
-        }
+        
+        if (event.key === 'Escape') { hideContextMenu(); closeSearch(); return; }
+        
         if (BRACKET_PAIRS[event.key] && !mod) {
             const start = codeEditor.selectionStart;
             const end = codeEditor.selectionEnd;
@@ -1800,6 +1649,7 @@
                 return;
             }
         }
+        
         if (CLOSING_CHARS.has(event.key) && !mod) {
             const start = codeEditor.selectionStart;
             if (start === codeEditor.selectionEnd && codeEditor.value[start] === event.key) {
@@ -1821,18 +1671,18 @@
 
     codeEditor.addEventListener('click', () => updateActiveLineNumber());
     codeEditor.addEventListener('keyup', () => updateActiveLineNumber());
+    
     codeEditor.addEventListener('scroll', () => {
         lineNumbers.scrollTop = codeEditor.scrollTop;
-        highlighting.scrollTop = codeEditor.scrollTop;
-        highlighting.scrollLeft = codeEditor.scrollLeft;
+        requestAnimationFrame(() => {
+            highlighting.style.transform = `translate(${-codeEditor.scrollLeft}px, ${-codeEditor.scrollTop}px)`;
+        });
     });
 
     $('undoBtn').addEventListener('click', () => applyHistory('undo'));
     $('redoBtn').addEventListener('click', () => applyHistory('redo'));
 
-    /* ============================================================
-       7. Поиск и замена
-       ============================================================ */
+    // --- ПОИСК ---
     const searchPanel = $('searchPanel');
     const searchInput = $('searchInput');
     const replaceInput = $('replaceInput');
@@ -1841,10 +1691,7 @@
     let searchIndex = -1;
 
     function openSearch() {
-        if (codeEditor.disabled) {
-            toast('Сначала откройте файл.', { type: 'warn' });
-            return;
-        }
+        if (codeEditor.disabled) { toast('Сначала откройте файл.', { type: 'warn' }); return; }
         searchPanel.classList.add('open');
         pushGuard();
         const selected = codeEditor.value.slice(codeEditor.selectionStart, codeEditor.selectionEnd);
@@ -1878,11 +1725,7 @@
     function refreshSearchResults() {
         if (!searchPanel.classList.contains('open')) return;
         searchMatches = computeMatches();
-        if (!searchMatches.length) {
-            searchIndex = -1;
-            searchCount.textContent = '0/0';
-            return;
-        }
+        if (!searchMatches.length) { searchIndex = -1; searchCount.textContent = '0/0'; return; }
         if (searchIndex < 0 || searchIndex >= searchMatches.length) {
             const caret = codeEditor.selectionStart;
             const next = searchMatches.findIndex((match) => match.start >= caret);
@@ -1947,22 +1790,13 @@
     $('searchPrev').addEventListener('click', () => goToMatch(searchIndex - 1));
     $('replaceOne').addEventListener('click', replaceCurrent);
     $('replaceAll').addEventListener('click', replaceAllMatches);
-    searchInput.addEventListener('input', () => {
-        searchIndex = -1;
-        refreshSearchResults();
-        if (searchMatches.length) goToMatch(0);
-    });
+    searchInput.addEventListener('input', () => { searchIndex = -1; refreshSearchResults(); if (searchMatches.length) goToMatch(0); });
     searchInput.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            goToMatch(searchIndex + (event.shiftKey ? -1 : 1));
-        }
+        if (event.key === 'Enter') { event.preventDefault(); goToMatch(searchIndex + (event.shiftKey ? -1 : 1)); }
         if (event.key === 'Escape') closeSearch();
     });
 
-    /* ============================================================
-       8. Настройки интерфейса
-       ============================================================ */
+    // --- НАСТРОЙКИ ---
     const uiSettings = { fontSize: 13, tabSize: 2, wrap: false };
 
     function applyUiSettings() {
@@ -1970,7 +1804,7 @@
         root.style.setProperty('--editor-font-size', `${uiSettings.fontSize}px`);
         root.style.setProperty('--editor-line-height', `${Math.round(uiSettings.fontSize * 1.6)}px`);
         root.style.setProperty('--editor-tab-size', String(uiSettings.tabSize));
-        codeEditor.classList.toggle('wrap', uiSettings.wrap);
+        codeWrapper.classList.toggle('wrap', uiSettings.wrap);
         renderedLineCount = 0;
         updateLineNumbers(true);
         updateHighlight();
@@ -1998,35 +1832,16 @@
         try { localStorage.setItem(STORAGE.ui, JSON.stringify(stored)); } catch (e) { /* не критично */ }
     }
 
-    $('fontSizeSelect').addEventListener('change', (event) => {
-        uiSettings.fontSize = Number(event.target.value);
-        persistUiSettings();
-        applyUiSettings();
-    });
-    $('tabSizeSelect').addEventListener('change', (event) => {
-        uiSettings.tabSize = Number(event.target.value);
-        persistUiSettings();
-        applyUiSettings();
-    });
-    $('wrapToggle').addEventListener('change', (event) => {
-        uiSettings.wrap = event.target.checked;
-        persistUiSettings();
-        applyUiSettings();
-    });
+    $('fontSizeSelect').addEventListener('change', (event) => { uiSettings.fontSize = Number(event.target.value); persistUiSettings(); applyUiSettings(); });
+    $('tabSizeSelect').addEventListener('change', (event) => { uiSettings.tabSize = Number(event.target.value); persistUiSettings(); applyUiSettings(); });
+    $('wrapToggle').addEventListener('change', (event) => { uiSettings.wrap = event.target.checked; persistUiSettings(); applyUiSettings(); });
 
     const settingsModal = $('settingsModal');
-    $('settingsBtn').addEventListener('click', () => {
-        settingsModal.classList.add('open');
-        pushGuard();
-    });
+    $('settingsBtn').addEventListener('click', () => { settingsModal.classList.add('open'); pushGuard(); });
     $('closeSettingsBtn').addEventListener('click', () => settingsModal.classList.remove('open'));
-    settingsModal.addEventListener('click', (event) => {
-        if (event.target === settingsModal) settingsModal.classList.remove('open');
-    });
+    settingsModal.addEventListener('click', (event) => { if (event.target === settingsModal) settingsModal.classList.remove('open'); });
 
-    /* ============================================================
-       9. Предпросмотр и консоль
-       ============================================================ */
+    // --- КОНСОЛЬ И ПРЕДПРОСМОТР ---
     const CONSOLE_SHIM = `(function () {
         var send = function (type, args, stack) {
             try {
@@ -2056,18 +1871,11 @@
 
     function buildPreviewHtml(files) {
         const list = Array.isArray(files) ? files : [];
-        const htmlFile = list.find((file) => file.name.toLowerCase() === 'index.html')
-            || list.find((file) => file.name.toLowerCase().endsWith('.html'));
-        if (!htmlFile) {
-            return '<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px"><h2>Файл index.html не найден</h2><p>Создайте index.html в корне проекта.</p></body></html>';
-        }
+        const htmlFile = list.find((file) => file.name.toLowerCase() === 'index.html') || list.find((file) => file.name.toLowerCase().endsWith('.html'));
+        if (!htmlFile) return '<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px"><h2>Файл index.html не найден</h2><p>Создайте index.html в корне проекта.</p></body></html>';
 
         const byPath = new Map();
-        list.forEach((file) => {
-            byPath.set(file.name.toLowerCase(), file);
-            byPath.set(file.path.toLowerCase(), file);
-        });
-
+        list.forEach((file) => { byPath.set(file.name.toLowerCase(), file); byPath.set(file.path.toLowerCase(), file); });
         const resolve = (raw) => {
             if (!raw) return null;
             const clean = raw.split('?')[0].split('#')[0].replace(/^\.\//, '').replace(/^\//, '');
@@ -2078,9 +1886,7 @@
         };
 
         let html = String(htmlFile.content || '');
-        if (!/<head[^>]*>/i.test(html)) {
-            html = html.replace(/<html[^>]*>/i, (match) => `${match}<head></head>`);
-        }
+        if (!/<head[^>]*>/i.test(html)) html = html.replace(/<html[^>]*>/i, (match) => `${match}<head></head>`);
 
         html = html.replace(/<link\b[^>]*>/gi, (tag) => {
             if (!/rel\s*=\s*["']?stylesheet/i.test(tag)) return tag;
@@ -2099,11 +1905,8 @@
             return `<script${isModule ? ' type="module"' : ''} data-src="${escapeHtml(src[1])}">\n${file.content || ''}\n<\/script>`;
         });
 
-        if (/<head[^>]*>/i.test(html)) {
-            html = html.replace(/<head([^>]*)>/i, (match) => `${match}\n<script>${CONSOLE_SHIM}<\/script>`);
-        } else {
-            html = `<script>${CONSOLE_SHIM}<\/script>` + html;
-        }
+        if (/<head[^>]*>/i.test(html)) html = html.replace(/<head([^>]*)>/i, (match) => `${match}\n<script>${CONSOLE_SHIM}<\/script>`);
+        else html = `<script>${CONSOLE_SHIM}<\/script>` + html;
 
         return html;
     }
@@ -2119,49 +1922,23 @@
                 this.log(data.logType, data.message, data.stack);
             });
         }
-
-        toggle() {
-            this.panel.classList.toggle('open');
-            this.dot.classList.remove('show');
-            if (this.panel.classList.contains('open')) {
-                setTimeout(() => { this.output.scrollTop = this.output.scrollHeight; }, 280);
-            }
-        }
-
-        open() {
-            this.panel.classList.add('open');
-            this.dot.classList.remove('show');
-            setTimeout(() => { this.output.scrollTop = this.output.scrollHeight; }, 280);
-        }
-
-        close() {
-            this.panel.classList.remove('open');
-        }
-
-        clear() {
-            this.output.innerHTML = '';
-        }
-
+        toggle() { this.panel.classList.toggle('open'); this.dot.classList.remove('show'); if (this.panel.classList.contains('open')) setTimeout(() => { this.output.scrollTop = this.output.scrollHeight; }, 280); }
+        open() { this.panel.classList.add('open'); this.dot.classList.remove('show'); setTimeout(() => { this.output.scrollTop = this.output.scrollHeight; }, 280); }
+        close() { this.panel.classList.remove('open'); }
+        clear() { this.output.innerHTML = ''; }
         log(type, message, stack) {
             const line = document.createElement('div');
             line.className = `console-line ${type || 'log'}`;
-
             let icon = 'fa-angle-right';
             if (type === 'error') icon = 'fa-circle-exclamation';
             if (type === 'warn') icon = 'fa-triangle-exclamation';
             if (type === 'info') icon = 'fa-circle-info';
-
             const safe = escapeHtml(String(message == null ? '' : message));
             const stackHtml = stack ? `<span class="stack">${escapeHtml(String(stack).split('\n').slice(0, 4).join('\n'))}</span>` : '';
             line.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${safe}${stackHtml}</span>`;
             this.output.appendChild(line);
-
-            if (type === 'error' && !this.panel.classList.contains('open')) {
-                this.dot.classList.add('show');
-            }
-            if (this.panel.classList.contains('open')) {
-                this.output.scrollTop = this.output.scrollHeight;
-            }
+            if (type === 'error' && !this.panel.classList.contains('open')) this.dot.classList.add('show');
+            if (this.panel.classList.contains('open')) this.output.scrollTop = this.output.scrollHeight;
         }
     }
 
@@ -2172,38 +1949,21 @@
 
     function filesWithPaths(items, prefix = [], list = []) {
         items.forEach((item) => {
-            if (item.type === 'file') {
-                list.push({ name: item.name, path: [...prefix, item.name].join('/'), content: item.content || '' });
-            } else if (item.children) {
-                filesWithPaths(item.children, [...prefix, item.name], list);
-            }
+            if (item.type === 'file') list.push({ name: item.name, path: [...prefix, item.name].join('/'), content: item.content || '' });
+            else if (item.children) filesWithPaths(item.children, [...prefix, item.name], list);
         });
         return list;
     }
 
     async function runProject() {
         const files = filesWithPaths(fileSystem);
-        const htmlFile = files.find((f) => f.name.toLowerCase() === 'index.html')
-            || files.find((f) => f.name.toLowerCase().endsWith('.html'));
+        const htmlFile = files.find((f) => f.name.toLowerCase() === 'index.html') || files.find((f) => f.name.toLowerCase().endsWith('.html'));
+        if (!htmlFile) { toast('Файл index.html не найден.', { type: 'error' }); return; }
 
-        if (!htmlFile) {
-            toast('Файл index.html не найден.', { type: 'error' });
-            return;
-        }
-
-        // Используем Service Worker для локального сервера, если доступен
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage({
-                type: 'SET_PREVIEW_FILES',
-                files: files.map((f) => ({
-                    name: f.name,
-                    path: f.path,
-                    content: f.content,
-                })),
-            });
+            navigator.serviceWorker.controller.postMessage({ type: 'SET_PREVIEW_FILES', files: files.map((f) => ({ name: f.name, path: f.path, content: f.content })) });
             $('previewFrame').src = '/__preview__/index.html';
         } else {
-            // Фолбэк: srcdoc (без поддержки import)
             const html = buildPreviewHtml(files);
             $('previewFrame').srcdoc = html;
         }
@@ -2218,9 +1978,7 @@
     $('previewReloadBtn').addEventListener('click', runProject);
     $('closePreviewBtn').addEventListener('click', () => $('previewOverlay').classList.remove('open'));
 
-    /* ============================================================
-       10. Экспорт и импорт проекта
-       ============================================================ */
+    // --- ЭКСПОРТ / ИМПОРТ ---
     const CRC_TABLE = (() => {
         const table = new Uint32Array(256);
         for (let i = 0; i < 256; i += 1) {
@@ -2233,9 +1991,7 @@
 
     function crc32(bytes) {
         let crc = 0xFFFFFFFF;
-        for (let i = 0; i < bytes.length; i += 1) {
-            crc = CRC_TABLE[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
-        }
+        for (let i = 0; i < bytes.length; i += 1) crc = CRC_TABLE[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
         return (crc ^ 0xFFFFFFFF) >>> 0;
     }
 
@@ -2324,49 +2080,25 @@
 
     function exportZip() {
         const files = filesWithPaths(fileSystem);
-        if (!files.length) {
-            toast('В проекте нет файлов.', { type: 'warn' });
-            return;
-        }
+        if (!files.length) { toast('В проекте нет файлов.', { type: 'warn' }); return; }
         downloadBlob(zipStore(files), 'codedock-project.zip');
         toast(`Скачано файлов: ${files.length}`, { type: 'success' });
     }
 
     function exportJson() {
-        const payload = {
-            app: 'CodeDock Studio',
-            version: APP_VERSION,
-            exportedAt: new Date().toISOString(),
-            tree: fileSystem,
-        };
+        const payload = { app: 'CodeDock Studio', version: APP_VERSION, exportedAt: new Date().toISOString(), tree: fileSystem };
         downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), 'codedock-project.json');
         toast('Проект выгружен в JSON.', { type: 'success' });
     }
 
     function importJson(text) {
         const parsed = safeParse(text);
-        if (!parsed) {
-            toast('Файл поврежден или имеет неверный формат JSON.', { type: 'error', duration: 6000 });
-            return false;
-        }
-        
+        if (!parsed) { toast('Файл поврежден.', { type: 'error' }); return false; }
         let tree = null;
-        if (Array.isArray(parsed)) {
-            tree = normalizeTree(parsed);
-        } else if (parsed && Array.isArray(parsed.tree)) {
-            tree = normalizeTree(parsed.tree);
-        } else if (parsed && parsed.app === 'CodeDock Studio' && !parsed.tree) {
-            toast('В файле нет данных проекта.', { type: 'error', duration: 6000 });
-            return false;
-        } else {
-            toast('Файл не похож на проект CodeDock.', { type: 'error', duration: 6000 });
-            return false;
-        }
-
-        if (!tree || !tree.length) {
-            toast('Проект пуст или структура файлов повреждена.', { type: 'error', duration: 6000 });
-            return false;
-        }
+        if (Array.isArray(parsed)) tree = normalizeTree(parsed);
+        else if (parsed && Array.isArray(parsed.tree)) tree = normalizeTree(parsed.tree);
+        
+        if (!tree || !tree.length) { toast('Проект пуст или поврежден.', { type: 'error' }); return false; }
 
         const previous = clone(fileSystem);
         fileSystem = tree;
@@ -2378,47 +2110,31 @@
         renderEditorAndTabs();
         toast('Проект импортирован.', {
             type: 'success',
-            action: {
-                label: 'Отменить',
-                onClick: () => {
-                    fileSystem = previous;
-                    activeFileId = getAllFiles(fileSystem)[0]?.id || null;
-                    openFileIds = activeFileId ? [activeFileId] : [];
-                    saveNow(true);
-                    renderEditorAndTabs();
-                },
-            },
+            action: { label: 'Отменить', onClick: () => {
+                fileSystem = previous;
+                activeFileId = getAllFiles(fileSystem)[0]?.id || null;
+                openFileIds = activeFileId ? [activeFileId] : [];
+                saveNow(true);
+                renderEditorAndTabs();
+            }},
         });
         return true;
     }
 
     $('exportZipBtn').addEventListener('click', exportZip);
     $('exportJsonBtn').addEventListener('click', exportJson);
-    
-    $('importBtn').addEventListener('click', (e) => {
-        e.preventDefault();
-        $('importFile').click();
-    });
-
+    $('importBtn').addEventListener('click', (e) => { e.preventDefault(); $('importFile').click(); });
     $('importFile').addEventListener('change', (event) => {
         const file = event.target.files && event.target.files[0];
         event.target.value = '';
         if (!file) return;
-
         const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                importJson(e.target.result);
-            } catch (error) {
-                toast(`Не удалось прочитать файл: ${error.message}`, { type: 'error' });
-            }
-        };
-        reader.onerror = () => toast('Ошибка чтения файла.', { type: 'error' });
+        reader.onload = (e) => { try { importJson(e.target.result); } catch (error) { toast(`Ошибка: ${error.message}`, { type: 'error' }); } };
         reader.readAsText(file);
     });
 
     $('resetProjectBtn').addEventListener('click', async () => {
-        const ok = await confirmAction('Сбросить проект?', 'Все файлы будут заменены демо-проектом. Действие можно отменить сразу после сброса.');
+        const ok = await confirmAction('Сбросить проект?', 'Все файлы будут заменены демо-проектом.');
         if (!ok) return;
         const previous = clone(fileSystem);
         fileSystem = clone(DEFAULT_PROJECT);
@@ -2431,22 +2147,17 @@
         renderEditorAndTabs();
         toast('Проект сброшен.', {
             type: 'success',
-            action: {
-                label: 'Отменить',
-                onClick: () => {
-                    fileSystem = previous;
-                    activeFileId = getAllFiles(fileSystem)[0]?.id || null;
-                    openFileIds = activeFileId ? [activeFileId] : [];
-                    saveNow(true);
-                    renderEditorAndTabs();
-                },
-            },
+            action: { label: 'Отменить', onClick: () => {
+                fileSystem = previous;
+                activeFileId = getAllFiles(fileSystem)[0]?.id || null;
+                openFileIds = activeFileId ? [activeFileId] : [];
+                saveNow(true);
+                renderEditorAndTabs();
+            }},
         });
     });
 
-    /* ============================================================
-       11. Дерево файлов
-       ============================================================ */
+    // --- ФАЙЛОВОЕ ДЕРЕВО ---
     function getFileIcon(filename) {
         const ext = filename.split('.').pop().toLowerCase();
         switch (ext) {
@@ -2465,10 +2176,7 @@
         const countStats = (items) => {
             items.forEach((item) => {
                 if (item.type === 'file') fileCount += 1;
-                else {
-                    folderCount += 1;
-                    if (item.children) countStats(item.children);
-                }
+                else { folderCount += 1; if (item.children) countStats(item.children); }
             });
         };
         countStats(fileSystem);
@@ -2534,11 +2242,7 @@
                     }
                     if (query) return;
                     const real = findItemById(fileSystem, item.id);
-                    if (real) {
-                        real.isOpen = !real.isOpen;
-                        saveNow();
-                        renderTree();
-                    }
+                    if (real) { real.isOpen = !real.isOpen; saveNow(); renderTree(); }
                 });
 
                 wrapper.appendChild(header);
@@ -2568,9 +2272,7 @@
         return result;
     }
 
-    /* ============================================================
-       12. Модалки создания и переименования
-       ============================================================ */
+    // --- МОДАЛКИ ---
     const createModal = $('createModal');
     const newItemNameInput = $('newItemName');
     const parentFolderSelect = $('parentFolderSelect');
@@ -2614,9 +2316,7 @@
         setTimeout(() => newItemNameInput.focus(), 60);
     }
 
-    function openCreateInFolder(folderId) {
-        openCreateModal(folderId);
-    }
+    function openCreateInFolder(folderId) { openCreateModal(folderId); }
 
     function openRenameModal(id) {
         const item = findItemById(fileSystem, id);
@@ -2632,16 +2332,11 @@
         setTimeout(() => { newItemNameInput.focus(); newItemNameInput.select(); }, 60);
     }
 
-    function closeCreateModal() {
-        createModal.classList.remove('open');
-        editingItemId = null;
-    }
+    function closeCreateModal() { createModal.classList.remove('open'); editingItemId = null; }
 
     $('openCreateModal').addEventListener('click', () => openCreateModal('root'));
     $('cancelModal').addEventListener('click', closeCreateModal);
-    createModal.addEventListener('click', (event) => {
-        if (event.target === createModal) closeCreateModal();
-    });
+    createModal.addEventListener('click', (event) => { if (event.target === createModal) closeCreateModal(); });
     document.querySelectorAll('.type-btn').forEach((button) => {
         button.addEventListener('click', () => {
             document.querySelectorAll('.type-btn').forEach((item) => item.classList.remove('active'));
@@ -2658,35 +2353,18 @@
         if (editingItemId) {
             const item = findItemById(fileSystem, editingItemId);
             if (!item) return;
-            if (nameExists(modalParentId, name, editingItemId)) {
-                toast('Такое имя уже есть в этой папке.', { type: 'error' });
-                return;
-            }
-            if (item.name !== name) {
-                item.name = name;
-                saveNow(true);
-            }
+            if (nameExists(modalParentId, name, editingItemId)) { toast('Такое имя уже есть.', { type: 'error' }); return; }
+            if (item.name !== name) { item.name = name; saveNow(true); }
             closeCreateModal();
             renderEditorAndTabs();
             return;
         }
 
         const parentId = parentFolderSelect.value === 'root' ? null : parentFolderSelect.value;
-        if (parentId && !findItemById(fileSystem, parentId)) {
-            toast('Папка больше не существует — выберите другую.', { type: 'error' });
-            return;
-        }
-        if (nameExists(parentId, name, null)) {
-            toast('Элемент с таким именем уже существует.', { type: 'error' });
-            return;
-        }
+        if (parentId && !findItemById(fileSystem, parentId)) { toast('Папка не существует.', { type: 'error' }); return; }
+        if (nameExists(parentId, name, null)) { toast('Элемент уже существует.', { type: 'error' }); return; }
 
-        const item = {
-            id: genId(),
-            name,
-            type: creatingType,
-            ...(creatingType === 'folder' ? { isOpen: true, children: [] } : { content: '' }),
-        };
+        const item = { id: genId(), name, type: creatingType, ...(creatingType === 'folder' ? { isOpen: true, children: [] } : { content: '' }) };
         if (parentId) {
             const parent = findItemById(fileSystem, parentId);
             parent.isOpen = true;
@@ -2735,28 +2413,20 @@
         toast(`Удалено: ${snapshot.name}`, {
             type: 'warn',
             duration: 7000,
-            action: {
-                label: 'Отменить',
-                onClick: () => {
-                    if (insertItem(snapshot, parentId, Math.max(0, index))) {
-                        saveNow(true);
-                        renderEditorAndTabs();
-                        toast('Восстановлено.', { type: 'success' });
-                    } else {
-                        toast('Не удалось восстановить: папка удалена.', { type: 'error' });
-                    }
-                },
-            },
+            action: { label: 'Отменить', onClick: () => {
+                if (insertItem(snapshot, parentId, Math.max(0, index))) {
+                    saveNow(true);
+                    renderEditorAndTabs();
+                    toast('Восстановлено.', { type: 'success' });
+                } else { toast('Папка удалена.', { type: 'error' }); }
+            }},
         });
     }
 
     $('collapseAllBtn').addEventListener('click', () => {
         const collapse = (items) => {
             items.forEach((item) => {
-                if (item.type === 'folder') {
-                    item.isOpen = false;
-                    if (item.children) collapse(item.children);
-                }
+                if (item.type === 'folder') { item.isOpen = false; if (item.children) collapse(item.children); }
             });
         };
         collapse(fileSystem);
@@ -2766,9 +2436,7 @@
 
     $('fileSearch').addEventListener('input', () => renderTree());
 
-    /* ============================================================
-       14. Жесты, контекстное меню, буфер обмена
-       ============================================================ */
+    // --- ЖЕСТЫ И КОНТЕКСТНОЕ МЕНЮ ---
     const fileDrawer = $('fileDrawer');
     const drawerBackdrop = $('drawerBackdrop');
     const customContextMenu = $('customContextMenu');
@@ -2776,16 +2444,8 @@
     let gesture = null;
     const workspaceEl = $('workspace');
 
-    function openDrawer() {
-        fileDrawer.classList.add('open');
-        drawerBackdrop.classList.add('open');
-        pushGuard();
-    }
-
-    function closeDrawer() {
-        fileDrawer.classList.remove('open');
-        drawerBackdrop.classList.remove('open');
-    }
+    function openDrawer() { fileDrawer.classList.add('open'); drawerBackdrop.classList.add('open'); pushGuard(); }
+    function closeDrawer() { fileDrawer.classList.remove('open'); drawerBackdrop.classList.remove('open'); }
 
     $('openDrawerBtn').addEventListener('click', openDrawer);
     $('closeDrawerBtn').addEventListener('click', closeDrawer);
@@ -2797,9 +2457,7 @@
         const target = event.target;
         const isOpen = fileDrawer.classList.contains('open');
 
-        if (target.closest('button') || target.closest('input') || target.closest('a')) {
-            return;
-        }
+        if (target.closest('button') || target.closest('input') || target.closest('a')) return;
 
         if (!isOpen && (target.closest('.line-numbers') || target.closest('.edge-swipe-area'))) {
             gesture = { mode: 'open', startX: touch.clientX, startY: touch.clientY, width: fileDrawer.offsetWidth, locked: false };
@@ -2874,52 +2532,33 @@
         pushGuard();
     }
 
-    function hideContextMenu() {
-        customContextMenu.classList.remove('open');
-    }
+    function hideContextMenu() { customContextMenu.classList.remove('open'); }
 
-    codeEditor.addEventListener('contextmenu', (event) => {
-        event.preventDefault();
-        showContextMenu(event.clientX, event.clientY);
-    });
+    codeEditor.addEventListener('contextmenu', (event) => { event.preventDefault(); showContextMenu(event.clientX, event.clientY); });
 
     codeEditor.addEventListener('touchstart', (event) => {
         if (event.touches.length !== 1) return;
         const touch = event.touches[0];
         const now = Date.now();
         touchMoved = false;
-
         if (now - lastTapTime < 300 && Math.abs(touch.clientX - lastTapX) < 40 && Math.abs(touch.clientY - lastTapY) < 40) {
             clearTimeout(longPressTimer);
             lastTapTime = 0;
             showContextMenu(touch.clientX, touch.clientY);
             return;
         }
-
         lastTapTime = now;
         lastTapX = touch.clientX;
         lastTapY = touch.clientY;
-
         clearTimeout(longPressTimer);
-        longPressTimer = setTimeout(() => {
-            if (!touchMoved) showContextMenu(touch.clientX, touch.clientY);
-        }, 650);
+        longPressTimer = setTimeout(() => { if (!touchMoved) showContextMenu(touch.clientX, touch.clientY); }, 650);
     }, { passive: true });
 
-    codeEditor.addEventListener('touchmove', () => {
-        touchMoved = true;
-        clearTimeout(longPressTimer);
-    }, { passive: true });
-
+    codeEditor.addEventListener('touchmove', () => { touchMoved = true; clearTimeout(longPressTimer); }, { passive: true });
     codeEditor.addEventListener('touchend', () => clearTimeout(longPressTimer));
+    codeEditor.addEventListener('dblclick', (event) => showContextMenu(event.clientX, event.clientY));
 
-    codeEditor.addEventListener('dblclick', (event) => {
-        showContextMenu(event.clientX, event.clientY);
-    });
-
-    window.addEventListener('pointerdown', (event) => {
-        if (!customContextMenu.contains(event.target)) hideContextMenu();
-    });
+    window.addEventListener('pointerdown', (event) => { if (!customContextMenu.contains(event.target)) hideContextMenu(); });
 
     function legacyCopy(text) {
         const area = document.createElement('textarea');
@@ -2929,17 +2568,14 @@
         document.body.appendChild(area);
         area.focus();
         area.select();
-        try { document.execCommand('copy'); } catch (e) { /* игнорируем */ }
+        try { document.execCommand('copy'); } catch (e) {}
         area.remove();
     }
 
     function safeCopy(text) {
         if (!text) return;
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(text).catch(() => legacyCopy(text));
-        } else {
-            legacyCopy(text);
-        }
+        if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).catch(() => legacyCopy(text));
+        else legacyCopy(text);
     }
 
     $('ctxSelectAll').addEventListener('pointerdown', (event) => {
@@ -2978,7 +2614,7 @@
             const text = await navigator.clipboard.readText();
             insertText(text);
         } catch (error) {
-            toast('Вставка недоступна — используйте системное меню.', { type: 'warn' });
+            toast('Вставка недоступна.', { type: 'warn' });
         }
     });
 
@@ -2997,9 +2633,7 @@
         codeEditor.focus();
     });
 
-    /* ============================================================
-       15. Кнопка «Назад»: одна запись истории на открытую панель
-       ============================================================ */
+    // --- СИСТЕМНАЯ КНОПКА НАЗАД ---
     let guardPushed = false;
 
     function pushGuard() {
@@ -3029,14 +2663,10 @@
     });
 
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && closeTopPanel()) {
-            event.stopPropagation();
-        }
+        if (event.key === 'Escape' && closeTopPanel()) event.stopPropagation();
     });
 
-    /* ============================================================
-       16. Прочее: кэш, service worker
-       ============================================================ */
+    // --- SERVICE WORKER ---
     $('resetCacheBtn').addEventListener('click', async () => {
         const ok = await confirmAction('Очистить кэш?', 'Приложение загрузит свежую версию. Файлы проекта сохранятся.');
         if (!ok) return;
@@ -3057,7 +2687,6 @@
         }
     });
 
-    // Регистрируем основной SW и SW для предпросмотра
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', async () => {
             try {
@@ -3069,12 +2698,8 @@
         });
     }
 
-    /* ============================================================
-       17. Старт
-       ============================================================ */
-    function renderAll() {
-        renderEditorAndTabs();
-    }
+    // --- СТАРТ ---
+    function renderAll() { renderEditorAndTabs(); }
 
     loadUiSettings();
     loadProject();
@@ -3083,13 +2708,7 @@
     setSaveStatus('saved', '<i class="fa-solid fa-check"></i> Готово');
 
     window.__codedock = {
-        version: APP_VERSION,
-        buildPreviewHtml,
-        zipStore,
-        crc32,
-        normalizeTree,
-        getFileSystem: () => fileSystem,
-        loadProject,
+        version: APP_VERSION, buildPreviewHtml, zipStore, crc32, normalizeTree, getFileSystem: () => fileSystem, loadProject,
     };
 </script>
 </body>
