@@ -679,7 +679,6 @@
         .modal-check { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
         .modal-check input { width: 18px; height: 18px; }
 
-        /* --- ЭКСПОРТ: СПИСОК ДЕЙСТВИЙ В МОДАЛКЕ --- */
         .export-options {
             display: flex;
             flex-direction: column;
@@ -982,7 +981,8 @@
                     <i class="fa-solid fa-terminal"></i>
                     <span class="console-dot" id="previewConsoleDot"></span>
                 </button>
-                <button class="btn-icon-only" id="closePreviewBtn" title="В редактор" aria-label="В редактор" style="width:32px;height:32px;">
+                <!-- ИСПРАВЛЕНА КНОПКА: теперь смотрит влево (назад в редактор) -->
+                <button class="btn-icon-only btn-run" id="closePreviewBtn" title="В редактор" aria-label="В редактор" style="width:32px;height:32px;">
                     <i class="fa-solid fa-arrow-left"></i>
                 </button>
             </div>
@@ -1073,7 +1073,6 @@
     </div>
 </div>
 
-<!-- МОДАЛ ЭКСПОРТА -->
 <div class="modal-overlay" id="exportModal" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
     <div class="modal-card">
         <h3 id="exportTitle" style="font-size:1.05rem;">
