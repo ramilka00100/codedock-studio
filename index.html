@@ -185,12 +185,7 @@
             flex-shrink: 0;
         }
 
-        .action-group {
-            display: flex;
-            gap: 8px;
-            width: 100%;
-            justify-content: space-between;
-        }
+        .action-group { display: flex; gap: 8px; }
 
         .btn-action {
             display: flex;
@@ -198,21 +193,22 @@
             justify-content: center;
             gap: 6px;
             height: 34px;
-            padding: 0;
-            width: 34px;
+            padding: 0 14px;
             border-radius: 8px;
             font-size: 0.88rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.15s;
             border: 1px solid transparent;
-            flex-shrink: 0;
         }
 
         .btn-action:active { transform: scale(0.96); }
 
-        .btn-icon { background-color: var(--bg-card); color: var(--text-main); border-color: var(--border); }
+        .btn-icon { padding: 0; width: 34px; background-color: var(--bg-card); color: var(--text-main); border-color: var(--border); }
         .btn-icon:active { border-color: var(--accent); color: var(--accent); }
+
+        .btn-save { background-color: var(--bg-card); color: var(--text-main); border-color: var(--border); }
+        .btn-save:active { border-color: var(--success); }
 
         .btn-run { background-color: var(--accent); color: #fff; box-shadow: 0 2px 8px var(--accent-glow); }
 
@@ -764,13 +760,16 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .hidden-file-input {
-            position: fixed;
-            left: -9999px;
-            top: 0;
-            opacity: 0;
+        .sr-only {
+            position: absolute;
             width: 1px;
             height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
         }
     </style>
 </head>
@@ -806,15 +805,17 @@
                 <button class="btn-action btn-icon" id="settingsBtn" title="Настройки" aria-label="Настройки">
                     <i class="fa-solid fa-gear"></i>
                 </button>
+            </div>
+            <div class="action-group">
                 <button class="btn-action btn-icon" id="consoleBtn" title="Консоль" aria-label="Консоль">
                     <i class="fa-solid fa-terminal"></i>
                     <span class="console-dot" id="consoleDot"></span>
                 </button>
-                <button class="btn-action btn-icon" id="saveProjectBtn" title="Сохранить" aria-label="Сохранить">
-                    <i class="fa-solid fa-floppy-disk"></i>
+                <button class="btn-action btn-save" id="saveProjectBtn">
+                    <i class="fa-solid fa-floppy-disk"></i> Сохранить
                 </button>
-                <button class="btn-action btn-icon btn-run" id="runProjectBtn" title="Запуск" aria-label="Запуск">
-                    <i class="fa-solid fa-play"></i>
+                <button class="btn-action btn-run" id="runProjectBtn">
+                    <i class="fa-solid fa-play"></i> Запуск
                 </button>
             </div>
         </div>
@@ -1003,7 +1004,7 @@
 </div>
 
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
-<input type="file" id="importFile" accept=".json,application/json" class="hidden-file-input">
+<input type="file" id="importFile" accept=".json,application/json" class="sr-only">
 
 <script>
     'use strict';
@@ -1062,6 +1063,14 @@
         return wrapped;
     }
 
+    function plural(n, forms) {
+        const m10 = n % 10;
+        const m100 = n % 100;
+        if (m10 === 1 && m100 !== 11) return forms[0];
+        if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return forms[1];
+        return forms[2];
+    }
+
     /* ============================================================
        2. Модель проекта: загрузка, проверка, сохранение
        ============================================================ */
@@ -1106,13 +1115,8 @@
             const result = [];
             for (const item of items) {
                 if (!item || typeof item !== 'object') return null;
-                
-                let name = typeof item.name === 'string' ? item.name.trim() : '';
-                if (!name) return null;
-                
-                // Заменяем слэши на дефисы, чтобы избежать ошибки валидации
-                name = name.replace(/[/\\]/g, '-');
-
+                const name = typeof item.name === 'string' ? item.name.trim() : '';
+                if (!name || name.includes('/')) return null;
                 const type = item.type === 'folder' ? 'folder' : 'file';
                 const node = {
                     id: typeof item.id === 'string' && item.id ? item.id : genId(),
@@ -1283,6 +1287,20 @@
             else if (item.children) getAllFiles(item.children, list);
         });
         return list;
+    }
+
+    function getItemPath(id) {
+        const parts = [];
+        const walk = (items, prefix) => {
+            for (const item of items) {
+                const path = [...prefix, item.name];
+                if (item.id === id) { parts.push(...path); return true; }
+                if (item.children && walk(item.children, path)) return true;
+            }
+            return false;
+        };
+        walk(fileSystem, []);
+        return parts.join('/');
     }
 
     function siblingsOf(parentId) {
@@ -2092,12 +2110,37 @@
         return list;
     }
 
-    function runProject() {
+    async function runProject() {
         const files = filesWithPaths(fileSystem);
-        const html = buildPreviewHtml(files);
+        const htmlFile = files.find((f) => f.name.toLowerCase() === 'index.html')
+            || files.find((f) => f.name.toLowerCase().endsWith('.html'));
+
+        if (!htmlFile) {
+            toast('Файл index.html не найден.', { type: 'error' });
+            return;
+        }
+
+        const worker = await navigator.serviceWorker.ready;
+        if (!worker || !worker.active) {
+            toast('Локальный сервер не запущен. Перезагрузите приложение.', { type: 'error' });
+            return;
+        }
+
+        // Отправляем файлы в Service Worker
+        worker.active.postMessage({
+            type: 'SET_PREVIEW_FILES',
+            files: files.map((f) => ({
+                name: f.name,
+                path: f.path,
+                content: f.content,
+            })),
+        });
+
         consolePanel.clear();
         consolePanel.close();
-        $('previewFrame').srcdoc = html;
+        
+        // Грузим iframe по виртуальному URL
+        $('previewFrame').src = '/__preview__/index.html';
         $('previewOverlay').classList.add('open');
         pushGuard();
     }
@@ -2105,7 +2148,6 @@
     $('runProjectBtn').addEventListener('click', runProject);
     $('previewReloadBtn').addEventListener('click', runProject);
     $('closePreviewBtn').addEventListener('click', () => $('previewOverlay').classList.remove('open'));
-
     /* ============================================================
        10. Экспорт и импорт проекта
        ============================================================ */
@@ -2234,29 +2276,11 @@
 
     function importJson(text) {
         const parsed = safeParse(text);
-        if (!parsed) {
-            toast('Файл поврежден или имеет неверный формат JSON.', { type: 'error', duration: 6000 });
-            return false;
-        }
-        
-        let tree = null;
-        if (Array.isArray(parsed)) {
-            tree = normalizeTree(parsed);
-        } else if (parsed && Array.isArray(parsed.tree)) {
-            tree = normalizeTree(parsed.tree);
-        } else if (parsed && parsed.app === 'CodeDock Studio' && !parsed.tree) {
-            toast('В файле нет данных проекта.', { type: 'error', duration: 6000 });
-            return false;
-        } else {
+        const tree = normalizeTree(parsed);
+        if (!tree || !tree.length) {
             toast('Файл не похож на проект CodeDock.', { type: 'error', duration: 6000 });
             return false;
         }
-
-        if (!tree || !tree.length) {
-            toast('Проект пуст или структура файлов повреждена.', { type: 'error', duration: 6000 });
-            return false;
-        }
-
         const previous = clone(fileSystem);
         fileSystem = tree;
         activeFileId = getAllFiles(fileSystem)[0]?.id || null;
@@ -2283,27 +2307,16 @@
 
     $('exportZipBtn').addEventListener('click', exportZip);
     $('exportJsonBtn').addEventListener('click', exportJson);
-    
-    $('importBtn').addEventListener('click', (e) => {
-        e.preventDefault();
-        $('importFile').click();
-    });
-
-    $('importFile').addEventListener('change', (event) => {
+    $('importBtn').addEventListener('click', () => $('importFile').click());
+    $('importFile').addEventListener('change', async (event) => {
         const file = event.target.files && event.target.files[0];
         event.target.value = '';
         if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                importJson(e.target.result);
-            } catch (error) {
-                toast(`Не удалось прочитать файл: ${error.message}`, { type: 'error' });
-            }
-        };
-        reader.onerror = () => toast('Ошибка чтения файла.', { type: 'error' });
-        reader.readAsText(file);
+        try {
+            importJson(await file.text());
+        } catch (error) {
+            toast(`Не удалось прочитать файл: ${error.message}`, { type: 'error' });
+        }
     });
 
     $('resetProjectBtn').addEventListener('click', async () => {
@@ -2612,6 +2625,7 @@
         const result = removeItemById(id);
         if (!result) return;
 
+        // После удаления папки могли исчезнуть открытые вкладки — пересобираем список.
         const remaining = getAllFiles(fileSystem);
         openFileIds = openFileIds.filter((fileId) => remaining.some((file) => file.id === fileId));
         if (!remaining.some((file) => file.id === activeFileId)) {
@@ -2656,6 +2670,9 @@
     $('fileSearch').addEventListener('input', () => renderTree());
 
     /* ============================================================
+       13. Отрисовка дерева и вкладок — общий вход
+       ============================================================ */
+    /* ============================================================
        14. Жесты, контекстное меню, буфер обмена
        ============================================================ */
     const fileDrawer = $('fileDrawer');
@@ -2683,13 +2700,8 @@
     workspaceEl.addEventListener('touchstart', (event) => {
         if (event.touches.length !== 1) return;
         const touch = event.touches[0];
-        const target = event.target;
         const isOpen = fileDrawer.classList.contains('open');
-
-        // Не перехватываем свайп, если тапнули по кнопке или полю ввода
-        if (target.closest('button') || target.closest('input') || target.closest('a')) {
-            return;
-        }
+        const target = event.target;
 
         if (!isOpen && (target.closest('.line-numbers') || target.closest('.edge-swipe-area'))) {
             gesture = { mode: 'open', startX: touch.clientX, startY: touch.clientY, width: fileDrawer.offsetWidth, locked: false };
@@ -2915,6 +2927,8 @@
 
     window.addEventListener('popstate', () => {
         guardPushed = false;
+        // Закрываем верхнюю панель и держим ровно одну запись истории на это открытие.
+        // Если закрывать нечего — не мешаем уйти назад из приложения.
         if (closeTopPanel()) pushGuard();
     });
 
@@ -2947,31 +2961,15 @@
         }
     });
 
+      // Регистрируем основной SW и SW для предпросмотра
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js').then((registration) => {
-                registration.addEventListener('updatefound', () => {
-                    const worker = registration.installing;
-                    if (!worker) return;
-                    worker.addEventListener('statechange', () => {
-                        if (worker.state === 'installed' && navigator.serviceWorker.controller) {
-                            toast('Доступна новая версия CodeDock.', {
-                                type: 'info',
-                                duration: 12000,
-                                action: {
-                                    label: 'Обновить',
-                                    onClick: () => {
-                                        worker.postMessage({ type: 'SKIP_WAITING' });
-                                        window.location.reload();
-                                    },
-                                },
-                            });
-                        }
-                    });
-                });
-            }).catch((error) => {
-                console.warn('Service worker не зарегистрирован:', error.message);
-            });
+        window.addEventListener('load', async () => {
+            try {
+                await navigator.serviceWorker.register('sw.js');
+                await navigator.serviceWorker.register('sw-preview.js', { scope: '/' });
+            } catch (error) {
+                console.warn('Ошибка регистрации Service Worker:', error.message);
+            }
         });
     }
 
