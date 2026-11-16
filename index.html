@@ -439,19 +439,20 @@
 
         .preview-frame { flex: 1; width: 100%; border: none; background: #fff; }
 
+        /* ПАНЕЛЬ КОНСОЛИ - ТЕПЕРЬ ВЫШЕ ПРЕВЬЮ */
         .console-panel {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            height: 38%;
+            height: 45%; /* Чуть увеличил для удобства */
             background-color: var(--bg-panel);
             border-top: 1px solid var(--border);
             display: flex;
             flex-direction: column;
             transform: translateY(100%);
             transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
-            z-index: 35;
+            z-index: 50; /* Выше превью (40) */
             box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.5);
         }
 
@@ -593,7 +594,7 @@
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.2s;
-            z-index: 100;
+            z-index: 1000;
             padding: 16px;
         }
 
@@ -707,7 +708,7 @@
             left: 50%;
             transform: translateX(-50%);
             bottom: calc(env(safe-area-inset-bottom) + 74px);
-            z-index: 300;
+            z-index: 3000;
             display: flex;
             flex-direction: column;
             gap: 8px;
@@ -829,17 +830,6 @@
             <div class="edge-swipe-area" id="edgeSwipeArea"></div>
         </div>
 
-        <div class="console-panel" id="consolePanel" aria-label="Консоль">
-            <div class="console-header">
-                <span><i class="fa-solid fa-terminal"></i> Консоль</span>
-                <div class="console-header-actions">
-                    <button class="console-btn" id="clearConsoleBtn" title="Очистить" aria-label="Очистить консоль"><i class="fa-solid fa-trash"></i></button>
-                    <button class="console-btn" id="closeConsoleBtn" title="Закрыть" aria-label="Закрыть консоль"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-            </div>
-            <div class="console-output" id="consoleOutput"></div>
-        </div>
-
         <div class="drawer-backdrop" id="drawerBackdrop"></div>
 
         <aside class="file-drawer" id="fileDrawer" aria-label="Файлы проекта">
@@ -892,13 +882,19 @@
         <button class="sym-btn" data-sym=";">;</button>
     </div>
 
+    <!-- ПРЕДПРОСМОТР -->
     <div class="preview-overlay" id="previewOverlay">
         <div class="preview-bar">
             <span style="font-weight:600;font-size:0.95rem;display:flex;align-items:center;">
                 <i class="fa-solid fa-globe" style="color:var(--accent);margin-right:6px;"></i>Предпросмотр
             </span>
             <div style="display:flex;gap:8px;align-items:center;">
-                <button class="btn-icon-only" id="previewReloadBtn" title="Перезапустить" aria-label="Перезапустить">
+                <!-- Кнопка консоли в превью -->
+                <button class="btn-icon-only" id="previewConsoleBtn" title="Консоль" aria-label="Консоль" style="width:32px;height:32px;">
+                    <i class="fa-solid fa-terminal"></i>
+                    <span class="console-dot" id="previewConsoleDot"></span>
+                </button>
+                <button class="btn-icon-only" id="previewReloadBtn" title="Перезапустить" aria-label="Перезапустить" style="width:32px;height:32px;">
                     <i class="fa-solid fa-rotate"></i>
                 </button>
                 <button class="btn-primary" id="closePreviewBtn" style="padding:6px 12px;">
@@ -908,6 +904,19 @@
         </div>
         <iframe class="preview-frame" id="previewFrame" title="Предпросмотр проекта" sandbox="allow-scripts allow-modals"></iframe>
     </div>
+
+    <!-- ПАНЕЛЬ КОНСОЛИ (теперь поверх всего) -->
+    <div class="console-panel" id="consolePanel" aria-label="Консоль">
+        <div class="console-header">
+            <span><i class="fa-solid fa-terminal"></i> Консоль</span>
+            <div class="console-header-actions">
+                <button class="console-btn" id="clearConsoleBtn" title="Очистить" aria-label="Очистить консоль"><i class="fa-solid fa-trash"></i></button>
+                <button class="console-btn" id="closeConsoleBtn" title="Закрыть" aria-label="Закрыть консоль"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+        <div class="console-output" id="consoleOutput"></div>
+    </div>
+
 </div>
 
 <div class="custom-context-menu" id="customContextMenu" role="menu">
@@ -1590,6 +1599,9 @@
             send('error', ['Необработанная ошибка: ' + (reason && reason.message ? reason.message : reason)],
                 reason && reason.stack ? reason.stack : '');
         });
+        window.addEventListener('load', function() {
+            console.log('CodeDock Preview Ready');
+        });
     })();`;
 
     function buildPreviewHtml(files) {
@@ -1638,15 +1650,23 @@
         constructor() {
             this.panel = $('consolePanel');
             this.output = $('consoleOutput');
-            this.dot = $('consoleDot');
+            this.dots = [$('consoleDot'), $('previewConsoleDot')].filter(Boolean);
             window.addEventListener('message', (event) => {
                 const data = event.data;
                 if (!data || data.type !== 'codedock-console') return;
                 this.log(data.logType, data.message, data.stack);
             });
         }
-        toggle() { this.panel.classList.toggle('open'); this.dot.classList.remove('show'); if (this.panel.classList.contains('open')) setTimeout(() => { this.output.scrollTop = this.output.scrollHeight; }, 280); }
-        open() { this.panel.classList.add('open'); this.dot.classList.remove('show'); setTimeout(() => { this.output.scrollTop = this.output.scrollHeight; }, 280); }
+        toggle() { 
+            this.panel.classList.toggle('open'); 
+            this.dots.forEach(d => d.classList.remove('show')); 
+            if (this.panel.classList.contains('open')) setTimeout(() => { this.output.scrollTop = this.output.scrollHeight; }, 280); 
+        }
+        open() { 
+            this.panel.classList.add('open'); 
+            this.dots.forEach(d => d.classList.remove('show')); 
+            setTimeout(() => { this.output.scrollTop = this.output.scrollHeight; }, 280); 
+        }
         close() { this.panel.classList.remove('open'); }
         clear() { this.output.innerHTML = ''; }
         log(type, message, stack) {
@@ -1660,13 +1680,16 @@
             const stackHtml = stack ? `<span class="stack">${escapeHtml(String(stack).split('\n').slice(0, 4).join('\n'))}</span>` : '';
             line.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${safe}${stackHtml}</span>`;
             this.output.appendChild(line);
-            if (type === 'error' && !this.panel.classList.contains('open')) this.dot.classList.add('show');
+            if (type === 'error' && !this.panel.classList.contains('open')) {
+                this.dots.forEach(d => d.classList.add('show'));
+            }
             if (this.panel.classList.contains('open')) this.output.scrollTop = this.output.scrollHeight;
         }
     }
 
     const consolePanel = new CodeDockConsole();
     $('consoleBtn').addEventListener('click', () => consolePanel.toggle());
+    $('previewConsoleBtn').addEventListener('click', () => consolePanel.toggle());
     $('closeConsoleBtn').addEventListener('click', () => consolePanel.close());
     $('clearConsoleBtn').addEventListener('click', () => consolePanel.clear());
 
@@ -2357,8 +2380,8 @@
         if (createModal.classList.contains('open')) { closeCreateModal(); return true; }
         if (settingsModal.classList.contains('open')) { settingsModal.classList.remove('open'); return true; }
         if ($('previewOverlay').classList.contains('open')) { $('previewOverlay').classList.remove('open'); return true; }
-        if (fileDrawer.classList.contains('open')) { closeDrawer(); return true; }
         if (consolePanel.panel.classList.contains('open')) { consolePanel.close(); return true; }
+        if (fileDrawer.classList.contains('open')) { closeDrawer(); return true; }
         if (searchPanel.classList.contains('open')) { closeSearch(); return true; }
         return false;
     }
