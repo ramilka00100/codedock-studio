@@ -1660,12 +1660,12 @@
         toggle() { 
             this.panel.classList.toggle('open'); 
             this.dots.forEach(d => d.classList.remove('show')); 
-            if (this.panel.classList.contains('open')) setTimeout(() => { this.output.scrollTop = this.output.scrollHeight; }, 280); 
+            if (this.panel.classList.contains('open')) this.output.scrollTop = this.output.scrollHeight;
         }
         open() { 
             this.panel.classList.add('open'); 
             this.dots.forEach(d => d.classList.remove('show')); 
-            setTimeout(() => { this.output.scrollTop = this.output.scrollHeight; }, 280); 
+            this.output.scrollTop = this.output.scrollHeight;
         }
         close() { this.panel.classList.remove('open'); }
         clear() { this.output.innerHTML = ''; }
@@ -1680,10 +1680,17 @@
             const stackHtml = stack ? `<span class="stack">${escapeHtml(String(stack).split('\n').slice(0, 4).join('\n'))}</span>` : '';
             line.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${safe}${stackHtml}</span>`;
             this.output.appendChild(line);
-            if (type === 'error' && !this.panel.classList.contains('open')) {
+
+            // Если это ошибка — принудительно открываем консоль
+            if (type === 'error') {
+                this.open();
+            } else if (!this.panel.classList.contains('open')) {
+                // Если это не ошибка, но консоль закрыта, просто показываем точку
                 this.dots.forEach(d => d.classList.add('show'));
+            } else {
+                // Если консоль открыта, скроллим вниз
+                this.output.scrollTop = this.output.scrollHeight;
             }
-            if (this.panel.classList.contains('open')) this.output.scrollTop = this.output.scrollHeight;
         }
     }
 
