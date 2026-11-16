@@ -839,13 +839,7 @@
         </div>
 
         <div class="editor-content">
-            <!-- Контейнер для CodeMirror -->
-            <div id="codeEditor">
-                <!-- Фолбэк на случай ошибки загрузки CDN -->
-                <div id="fallbackEditor" style="display: none; padding: 14px; color: var(--danger); font-size: 14px;">
-                    <i class="fa-solid fa-triangle-exclamation"></i> Не удалось загрузить редактор. Проверьте подключение к интернету.
-                </div>
-            </div>
+            <div id="codeEditor"></div>
             <div class="edge-swipe-area" id="edgeSwipeArea"></div>
         </div>
 
@@ -1024,7 +1018,6 @@
     "@codemirror/search": "https://esm.sh/@codemirror/search@6.5.6",
     "@codemirror/autocomplete": "https://esm.sh/@codemirror/autocomplete@6.15.0",
     "@codemirror/language": "https://esm.sh/@codemirror/language@6.10.1",
-    "@codemirror/lint": "https://esm.sh/@codemirror/lint@6.5.0",
     "@codemirror/lang-html": "https://esm.sh/@codemirror/lang-html@6.4.9",
     "@codemirror/lang-css": "https://esm.sh/@codemirror/lang-css@6.2.1",
     "@codemirror/lang-javascript": "https://esm.sh/@codemirror/lang-javascript@6.2.2",
@@ -1038,12 +1031,11 @@
     // ИСПОЛЬЗУЕМ КОРОТКИЕ ИМЕНА (БЛАГОДАРЯ IMPORTMAP)
     import { EditorState, Compartment } from '@codemirror/state';
     import { EditorView, keymap, lineNumbers, highlightActiveLineGutter, drawSelection, highlightSpecialChars, rectangularSelection, crosshairCursor, dropCursor, highlightActiveLine } from '@codemirror/view';
-    import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo } from '@codemirror/commands';
+    import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
     import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
     import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
     import { foldGutter, foldKeymap, indentOnInput, syntaxHighlighting, bracketMatching, HighlightStyle } from '@codemirror/language';
     import { tags } from '@lezer/highlight';
-    import { lintKeymap } from '@codemirror/lint';
     
     // Языки
     import { html } from '@codemirror/lang-html';
@@ -1162,7 +1154,6 @@
                         ...historyKeymap,
                         ...foldKeymap,
                         ...completionKeymap,
-                        ...lintKeymap,
                         indentWithTab
                     ]),
                     languageConf.of([]),
@@ -1187,7 +1178,7 @@
             });
         } catch (error) {
             console.error("CodeMirror failed to load:", error);
-            $('fallbackEditor').style.display = 'block';
+            $('codeEditor').innerHTML = `<div style="padding:14px;color:var(--danger);font-size:14px;"><i class="fa-solid fa-triangle-exclamation"></i> Ошибка загрузки редактора: ${error.message}</div>`;
             toast('Ошибка инициализации редактора.', { type: 'error' });
         }
     }
@@ -2452,8 +2443,8 @@
     });
 
     // --- КНОПКИ ИНСТРУМЕНТОВ ---
-    $('undoBtn').addEventListener('click', () => { if (cmView) { undo(cmView); cmView.focus(); } });
-    $('redoBtn').addEventListener('click', () => { if (cmView) { redo(cmView); cmView.focus(); } });
+    $('undoBtn').addEventListener('click', () => { if (cmView) cmView.focus(); });
+    $('redoBtn').addEventListener('click', () => { if (cmView) cmView.focus(); });
 
     $('symbolBar').addEventListener('click', (event) => {
         const button = event.target.closest('.sym-btn');
