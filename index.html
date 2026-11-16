@@ -51,6 +51,23 @@
             overflow: hidden;
         }
 
+        /* --- Шапка с логотипом --- */
+        .brand-header {
+            display: flex;
+            align-items: center;
+            padding: 8px 14px;
+            background-color: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .brand-logo {
+            height: 38px;
+            width: auto;
+            object-fit: contain;
+            /* Убраны фильтры, так как фон прозрачный */
+        }
+        /* -------------------------- */
+
         .editor-topbar {
             display: flex;
             align-items: center;
@@ -185,6 +202,7 @@
             white-space: pre;
             overflow-x: auto;
             overflow-y: scroll;
+            autocorrect: off;
         }
 
         .custom-context-menu {
@@ -615,6 +633,12 @@
 <body>
 
 <div class="workspace">
+    <!-- Шапка с логотипом -->
+    <div class="brand-header">
+        <!-- Убедитесь, что картинка называется logo.png и лежит в одной папке с html -->
+        <img src="logo.png" alt="CodeDock Studio" class="brand-logo" onerror="this.style.display='none'">
+    </div>
+
     <header class="editor-topbar">
         <button class="btn-icon-only" id="openDrawerBtn" title="Файлы проекта">
             <i class="fa-solid fa-folder-tree"></i>
@@ -627,7 +651,7 @@
 
     <main class="editor-body">
         <div class="line-numbers" id="lineNumbers"></div>
-        <textarea class="code-textarea" id="codeEditor" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+        <textarea class="code-textarea" id="codeEditor" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" inputmode="text" placeholder="// Создайте новый файл в меню слева"></textarea>
     </main>
 
     <div class="custom-context-menu" id="customContextMenu">
@@ -691,7 +715,7 @@
                 <i class="fa-solid fa-xmark"></i> В редактор
             </button>
         </div>
-        <iframe class="preview-frame" id="previewFrame"></iframe>
+        <iframe class="preview-frame" id="previewFrame" sandbox="allow-scripts allow-modals"></iframe>
     </div>
 </div>
 
@@ -754,11 +778,17 @@
         }
     ];
 
-    let fileSystem = JSON.parse(localStorage.getItem('codedock_tree_v2')) || JSON.parse(JSON.stringify(DEFAULT_PROJECT));
+    function safeParse(json, fallback) {
+        try { return JSON.parse(json); } catch (e) { return fallback; }
+    }
+
+    let fileSystem = safeParse(localStorage.getItem('codedock_tree_v2'), null)
+        || JSON.parse(JSON.stringify(DEFAULT_PROJECT));
     let activeFileId = localStorage.getItem('codedock_active_v2') || '1';
     let creatingType = 'file';
     let editingItemId = null;
     let searchQuery = '';
+    let lastRenderedFileId = null;
 
     const codeEditor = document.getElementById('codeEditor');
     const lineNumbers = document.getElementById('lineNumbers');
@@ -778,9 +808,24 @@
 
     const customContextMenu = document.getElementById('customContextMenu');
 
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    }
+
+    function genId() {
+        if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+        return Date.now().toString() + Math.random().toString(36).slice(2, 8);
+    }
+
     function saveState() {
-        localStorage.setItem('codedock_tree_v2', JSON.stringify(fileSystem));
-        localStorage.setItem('codedock_active_v2', activeFileId);
+        try {
+            localStorage.setItem('codedock_tree_v2', JSON.stringify(fileSystem));
+            localStorage.setItem('codedock_active_v2', activeFileId);
+        } catch (e) {
+            console.warn('Не удалось сохранить проект:', e.message);
+        }
     }
 
     function getFileIcon(filename) {
@@ -841,20 +886,27 @@
         allFiles.forEach(file => {
             const tab = document.createElement('div');
             tab.className = `tab-chip ${file.id === activeFileId ? 'active' : ''}`;
-            tab.innerHTML = `${getFileIcon(file.name)}<span>${file.name}</span>`;
+            tab.innerHTML = `${getFileIcon(file.name)}<span>${escapeHtml(file.name)}</span>`;
             tab.onclick = () => {
                 activeFileId = file.id;
                 saveState();
-                renderAll();
+                renderEditorAndTabs();
+                renderTree();
             };
             tabsBar.appendChild(tab);
         });
         if (currentFile) {
             codeEditor.disabled = false;
-            codeEditor.value = currentFile.content || '';
+            if (lastRenderedFileId !== currentFile.id) {
+                codeEditor.value = currentFile.content || '';
+                lastRenderedFileId = currentFile.id;
+            }
+            codeEditor.placeholder = '';
         } else {
             codeEditor.disabled = true;
-            codeEditor.value = '// Создайте новый файл в меню слева';
+            codeEditor.value = '';
+            codeEditor.placeholder = '// Создайте новый файл в меню слева';
+            lastRenderedFileId = null;
         }
         updateLineNumbers();
     }
@@ -874,8 +926,29 @@
         lineNumbers.scrollTop = codeEditor.scrollTop;
     });
 
+    codeEditor.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab' && !codeEditor.disabled) {
+            e.preventDefault();
+            const start = codeEditor.selectionStart;
+            const end = codeEditor.selectionEnd;
+            const text = codeEditor.value;
+            codeEditor.value = text.substring(0, start) + '  ' + text.substring(end);
+            codeEditor.selectionStart = codeEditor.selectionEnd = start + 2;
+            codeEditor.dispatchEvent(new Event('input'));
+        }
+    });
+
+    // --- Логика контекстного меню (Долгий тап + Двойной тап) ---
     let longPressTimer = null;
     let touchMoved = false;
+    let lastTapTime = 0;
+    let lastTapX = 0;
+    let lastTapY = 0;
+    let lastDoubleTapAt = 0;
+
+    const LONG_PRESS_DELAY = 700;
+    const DOUBLE_TAP_DELAY = 300;
+    const DOUBLE_TAP_DISTANCE = 40;
 
     function showContextMenu(clientX, clientY) {
         customContextMenu.classList.add('open');
@@ -884,8 +957,8 @@
         let y = clientY;
         if (x + rect.width > window.innerWidth - 10) x = window.innerWidth - rect.width - 10;
         if (y + rect.height > window.innerHeight - 10) y = window.innerHeight - rect.height - 10;
-        customContextMenu.style.left = `${x}px`;
-        customContextMenu.style.top = `${y}px`;
+        customContextMenu.style.left = `${Math.max(10, x)}px`;
+        customContextMenu.style.top = `${Math.max(10, y)}px`;
     }
 
     function hideContextMenu() {
@@ -898,16 +971,37 @@
     });
 
     codeEditor.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        const touch = e.touches[0];
+        const now = Date.now();
         touchMoved = false;
-        if (e.touches.length === 1) {
-            const touch = e.touches[0];
+
+        const isDoubleTap =
+            (now - lastTapTime < DOUBLE_TAP_DELAY) &&
+            Math.abs(touch.clientX - lastTapX) < DOUBLE_TAP_DISTANCE &&
+            Math.abs(touch.clientY - lastTapY) < DOUBLE_TAP_DISTANCE;
+
+        if (isDoubleTap) {
             clearTimeout(longPressTimer);
-            longPressTimer = setTimeout(() => {
-                if (!touchMoved) {
-                    showContextMenu(touch.clientX, touch.clientY);
-                }
-            }, 700);
+            lastTapTime = 0;
+            lastDoubleTapAt = now;
+            showContextMenu(touch.clientX, touch.clientY);
+            return;
         }
+
+        lastTapTime = now;
+        lastTapX = touch.clientX;
+        lastTapY = touch.clientY;
+
+        clearTimeout(longPressTimer);
+        longPressTimer = setTimeout(() => {
+            if (!touchMoved) showContextMenu(touch.clientX, touch.clientY);
+        }, LONG_PRESS_DELAY);
+    });
+
+    codeEditor.addEventListener('dblclick', (e) => {
+        if (Date.now() - lastDoubleTapAt < 500) return;
+        showContextMenu(e.clientX, e.clientY);
     });
 
     codeEditor.addEventListener('touchmove', () => {
@@ -920,25 +1014,28 @@
     });
 
     window.addEventListener('pointerdown', (e) => {
-        if (!customContextMenu.contains(e.target)) {
-            hideContextMenu();
-        }
+        if (!customContextMenu.contains(e.target)) hideContextMenu();
     });
+    // ---------------------------------------------------------
+
+    function legacyCopy(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        ta.remove();
+    }
 
     function safeCopy(text) {
         if (!text) return;
-        try {
-            navigator.clipboard.writeText(text);
-        } catch (e) {
-            const ta = document.createElement('textarea');
-            ta.value = text;
-            document.body.appendChild(ta);
-            ta.focus();
-            ta.select();
-            try {
-                document.execCommand('copy');
-            } catch (e) {}
-            ta.remove();
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).catch(() => legacyCopy(text));
+        } else {
+            legacyCopy(text);
         }
     }
 
@@ -946,6 +1043,7 @@
         e.preventDefault();
         codeEditor.focus({ preventScroll: true });
         codeEditor.setSelectionRange(0, codeEditor.value.length);
+        // Меню не закрываем, чтобы можно было сразу нажать "Копировать" или "Вырезать"
     };
 
     document.getElementById('ctxCut').onpointerdown = (e) => {
@@ -971,7 +1069,9 @@
 
     document.getElementById('ctxPaste').onpointerdown = async (e) => {
         e.preventDefault();
+        hideContextMenu();
         try {
+            if (!navigator.clipboard || !navigator.clipboard.readText) throw new Error('Clipboard API недоступен');
             const text = await navigator.clipboard.readText();
             const start = codeEditor.selectionStart;
             const end = codeEditor.selectionEnd;
@@ -979,9 +1079,9 @@
             codeEditor.selectionStart = codeEditor.selectionEnd = start + text.length;
             codeEditor.dispatchEvent(new Event('input'));
         } catch (err) {
-            console.log('Не удалось прочитать буфер: ' + err.message + '. Используй долгий тап → «Вставить».');
+            console.warn('Вставка недоступна:', err.message);
+            alert('Вставка из буфера недоступна. Используйте системное меню «Вставить» (долгий тап).');
         }
-        hideContextMenu();
     };
 
     document.getElementById('ctxClear').onpointerdown = (e) => {
@@ -1005,7 +1105,6 @@
         codeEditor.dispatchEvent(new Event('input'));
     });
 
-    const fileDrawerEl = document.getElementById('fileDrawer');
     const closeDrawerBtn = document.getElementById('closeDrawerBtn');
 
     function openDrawer() {
@@ -1024,19 +1123,39 @@
 
     document.getElementById('runProjectBtn').onclick = () => {
         const allFiles = getAllFiles(fileSystem);
-        const htmlFile = allFiles.find(f => f.name.toLowerCase() === 'index.html') || allFiles.find(f => f.name.endsWith('.html'));
-        const cssFiles = allFiles.filter(f => f.name.endsWith('.css'));
-        const jsFiles = allFiles.filter(f => f.name.endsWith('.js'));
+        const htmlFile = allFiles.find(f => f.name.toLowerCase() === 'index.html')
+            || allFiles.find(f => f.name.toLowerCase().endsWith('.html'));
+        const cssFiles = allFiles.filter(f => f.name.toLowerCase().endsWith('.css'));
+        const jsFiles = allFiles.filter(f => f.name.toLowerCase().endsWith('.js'));
 
         let html = htmlFile ? htmlFile.content : '<h2>Файл index.html не найден</h2>';
-        const styles = cssFiles.map(f => `<style>${f.content}</style>`).join('\n');
-        const scripts = jsFiles.map(f => `<script>${f.content}<\/script>`).join('\n');
 
-        html = html.replace(/<link[^>]*rel=["']stylesheet["'][^>]*>/gi, '');
-        html = html.replace(/<script[^>]*src=[^>]*><\/script>/gi, '');
+        let doc;
+        try {
+            doc = new DOMParser().parseFromString(html, 'text/html');
+        } catch (e) {
+            doc = null;
+        }
 
-        const finalOutput = `${styles}\n${html}\n${scripts}`;
-        document.getElementById('previewFrame').srcdoc = finalOutput;
+        if (doc) {
+            doc.querySelectorAll('link[rel="stylesheet"]').forEach(el => el.remove());
+            doc.querySelectorAll('script[src]').forEach(el => el.remove());
+            if (!doc.head) doc.documentElement.insertBefore(doc.createElement('head'), doc.body || null);
+
+            cssFiles.forEach(f => {
+                const style = doc.createElement('style');
+                style.textContent = f.content || '';
+                doc.head.appendChild(style);
+            });
+            jsFiles.forEach(f => {
+                const script = doc.createElement('script');
+                script.textContent = f.content || '';
+                (doc.body || doc.head).appendChild(script);
+            });
+            html = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+        }
+
+        document.getElementById('previewFrame').srcdoc = html;
         document.getElementById('previewOverlay').classList.add('open');
     };
 
@@ -1062,7 +1181,8 @@
     }
 
     window.deleteItem = function(id, event) {
-        event.stopPropagation();
+        if (event) event.stopPropagation();
+        const wasActive = (id === activeFileId);
         function removeFrom(arr) {
             return arr.filter(item => {
                 if (item.id === id) return false;
@@ -1071,13 +1191,22 @@
             });
         }
         fileSystem = removeFrom(fileSystem);
+        if (wasActive) {
+            const remaining = getAllFiles(fileSystem);
+            activeFileId = remaining.length ? remaining[0].id : '';
+            lastRenderedFileId = null;
+        }
         saveState();
         renderAll();
     };
 
     window.openCreateInFolder = function(folderId, event) {
-        event.stopPropagation();
+        if (event) event.stopPropagation();
         editingItemId = null;
+        creatingType = 'file';
+        document.querySelectorAll('.type-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.type === 'file');
+        });
         modalTitle.textContent = 'Новый элемент';
         typeSelector.style.display = 'flex';
         parentFolderField.style.display = 'flex';
@@ -1088,7 +1217,7 @@
     };
 
     window.openRenameModal = function(id, event) {
-        event.stopPropagation();
+        if (event) event.stopPropagation();
         const item = findItemById(fileSystem, id);
         if (!item) return;
         editingItemId = id;
@@ -1105,6 +1234,10 @@
 
     document.getElementById('openCreateModal').onclick = () => {
         editingItemId = null;
+        creatingType = 'file';
+        document.querySelectorAll('.type-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.type === 'file');
+        });
         modalTitle.textContent = 'Новый элемент';
         typeSelector.style.display = 'flex';
         parentFolderField.style.display = 'flex';
@@ -1124,20 +1257,32 @@
         };
     });
 
+    function nameExistsInParent(parentId, name, ignoreId) {
+        const siblings = parentId === 'root'
+            ? fileSystem
+            : (findItemById(fileSystem, parentId)?.children || []);
+        return siblings.some(s => s.name.toLowerCase() === name.toLowerCase() && s.id !== ignoreId);
+    }
+
     function handleSave() {
         const name = newItemNameInput.value.trim();
         if (!name) return;
         if (editingItemId) {
             const item = findItemById(fileSystem, editingItemId);
-            if (item) item.name = name;
+            if (!item) return;
+            item.name = name;
         } else {
+            const targetFolderId = parentFolderSelect.value;
+            if (nameExistsInParent(targetFolderId, name, null)) {
+                alert('Элемент с таким именем уже существует в этой папке.');
+                return;
+            }
             const newItem = {
-                id: Date.now().toString(),
+                id: genId(),
                 name: name,
                 type: creatingType,
                 ...(creatingType === 'folder' ? { isOpen: true, children: [] } : { content: '' })
             };
-            const targetFolderId = parentFolderSelect.value;
             if (targetFolderId === 'root') {
                 fileSystem.push(newItem);
             } else {
@@ -1149,6 +1294,7 @@
             }
             if (creatingType === 'file') {
                 activeFileId = newItem.id;
+                lastRenderedFileId = null;
                 closeDrawer();
             }
         }
@@ -1208,23 +1354,30 @@
                     itemEl.innerHTML = `
                         <div class="tree-info">
                             ${getFileIcon(item.name)}
-                            <span>${item.name}</span>
+                            <span>${escapeHtml(item.name)}</span>
                         </div>
                         <div class="tree-actions">
-                            <button class="action-icon" onclick="openRenameModal('${item.id}', event)">
+                            <button class="action-icon" data-action="rename">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
-                            <button class="action-icon delete" onclick="deleteItem('${item.id}', event)">
+                            <button class="action-icon delete" data-action="delete">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </div>
                     `;
-                    itemEl.onclick = () => {
+                    itemEl.addEventListener('click', (e) => {
+                        const btn = e.target.closest('button[data-action]');
+                        if (btn) {
+                            e.stopPropagation();
+                            if (btn.dataset.action === 'rename') window.openRenameModal(item.id, e);
+                            else if (btn.dataset.action === 'delete') window.deleteItem(item.id, e);
+                            return;
+                        }
                         activeFileId = item.id;
                         saveState();
                         renderAll();
                         closeDrawer();
-                    };
+                    });
                     parentElement.appendChild(itemEl);
                 } else if (item.type === 'folder') {
                     const wrapperEl = document.createElement('div');
@@ -1234,31 +1387,39 @@
                         <div class="tree-info">
                             <i class="fa-solid fa-chevron-right chevron-icon ${item.isOpen ? 'rotated' : ''}"></i>
                             <i class="fa-solid ${item.isOpen ? 'fa-folder-open' : 'fa-folder'} icon-folder"></i>
-                            <span>${item.name}</span>
+                            <span>${escapeHtml(item.name)}</span>
                         </div>
                         <div class="tree-actions">
-                            <button class="action-icon" onclick="openCreateInFolder('${item.id}', event)">
+                            <button class="action-icon" data-action="create">
                                 <i class="fa-solid fa-plus"></i>
                             </button>
-                            <button class="action-icon" onclick="openRenameModal('${item.id}', event)">
+                            <button class="action-icon" data-action="rename">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
-                            <button class="action-icon delete" onclick="deleteItem('${item.id}', event)">
+                            <button class="action-icon delete" data-action="delete">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </div>
                     `;
                     const childrenContainer = document.createElement('div');
                     childrenContainer.className = `folder-children ${item.isOpen ? 'open' : ''}`;
-                    headerEl.onclick = (e) => {
-                        if (e.target.closest('button')) return;
+                    headerEl.addEventListener('click', (e) => {
+                        const btn = e.target.closest('button[data-action]');
+                        if (btn) {
+                            e.stopPropagation();
+                            if (btn.dataset.action === 'create') window.openCreateInFolder(item.id, e);
+                            else if (btn.dataset.action === 'rename') window.openRenameModal(item.id, e);
+                            else if (btn.dataset.action === 'delete') window.deleteItem(item.id, e);
+                            return;
+                        }
+                        if (searchQuery) return;
                         const realFolder = findItemById(fileSystem, item.id);
                         if (realFolder) {
                             realFolder.isOpen = !realFolder.isOpen;
                             saveState();
                             renderTree();
                         }
-                    };
+                    });
                     wrapperEl.appendChild(headerEl);
                     wrapperEl.appendChild(childrenContainer);
                     parentElement.appendChild(wrapperEl);
