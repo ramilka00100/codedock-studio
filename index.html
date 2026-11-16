@@ -258,15 +258,21 @@
             z-index: 1;
             color: #e5e7eb;
             background: transparent;
+            box-sizing: border-box;
         }
 
         .highlight-layer code {
-            display: block; /* Важно для transform */
+            display: block;
+            width: max-content; /* Заставляет блок растягиваться под длину текста */
+            min-width: 100%;
             font-family: inherit;
             font-size: inherit;
             line-height: inherit;
-            background: transparent;
-            padding: 0;
+            background: transparent !important; /* Убираем темный фон из темы */
+            padding: 0 !important;
+            margin: 0;
+            border: none;
+            letter-spacing: 0;
         }
 
         /* Слой ввода (прозрачный) */
@@ -278,7 +284,7 @@
             height: 100%;
             background: transparent;
             color: transparent;
-            -webkit-text-fill-color: transparent; /* Надежное скрытие текста на мобильных */
+            -webkit-text-fill-color: transparent;
             caret-color: var(--accent);
             border: none;
             outline: none;
@@ -292,6 +298,9 @@
             overflow-x: auto;
             overflow-y: scroll;
             z-index: 2;
+            box-sizing: border-box;
+            letter-spacing: 0;
+            word-spacing: 0;
         }
 
         .code-textarea::selection {
@@ -302,8 +311,11 @@
         .code-wrapper.wrap .code-textarea,
         .code-wrapper.wrap .highlight-layer {
             white-space: pre-wrap;
-            overflow-wrap: anywhere;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
         }
+        .code-wrapper.wrap .code-textarea { overflow-x: hidden; }
+        .code-wrapper.wrap .highlight-layer code { width: 100%; min-width: 0; }
 
         .edge-swipe-area { position: absolute; left: 0; top: 0; bottom: 0; width: 12px; z-index: 15; touch-action: pan-y; }
 
@@ -1446,10 +1458,18 @@
             highlighting.className = 'hljs';
         }
 
-        // Синхронизация через transform (лучший способ для скролла)
-        requestAnimationFrame(() => {
-            highlighting.style.transform = `translate(${-codeEditor.scrollLeft}px, ${-codeEditor.scrollTop}px)`;
-        });
+        syncEditorScroll();
+    }
+
+    function syncEditorScroll() {
+        lineNumbers.scrollTop = codeEditor.scrollTop;
+        
+        // При переносе строк горизонтальный сдвиг не нужен
+        const x = uiSettings.wrap ? 0 : -codeEditor.scrollLeft;
+        const y = -codeEditor.scrollTop;
+        
+        // Сдвигаем только <code>, чтобы padding контейнера оставался на месте
+        highlighting.style.transform = `translate(${x}px, ${y}px)`;
     }
 
     function renderTabs() {
@@ -1673,10 +1693,7 @@
     codeEditor.addEventListener('keyup', () => updateActiveLineNumber());
     
     codeEditor.addEventListener('scroll', () => {
-        lineNumbers.scrollTop = codeEditor.scrollTop;
-        requestAnimationFrame(() => {
-            highlighting.style.transform = `translate(${-codeEditor.scrollLeft}px, ${-codeEditor.scrollTop}px)`;
-        });
+        syncEditorScroll();
     });
 
     $('undoBtn').addEventListener('click', () => applyHistory('undo'));
@@ -1808,6 +1825,7 @@
         renderedLineCount = 0;
         updateLineNumbers(true);
         updateHighlight();
+        syncEditorScroll();
     }
 
     function loadUiSettings() {
