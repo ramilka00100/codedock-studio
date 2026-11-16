@@ -764,16 +764,13 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .sr-only {
-            position: absolute;
+        .hidden-file-input {
+            position: fixed;
+            left: -9999px;
+            top: 0;
+            opacity: 0;
             width: 1px;
             height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
         }
     </style>
 </head>
@@ -1006,7 +1003,7 @@
 </div>
 
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
-<input type="file" id="importFile" accept=".json,application/json" class="sr-only">
+<input type="file" id="importFile" class="hidden-file-input">
 
 <script>
     'use strict';
@@ -2263,7 +2260,12 @@
 
     $('exportZipBtn').addEventListener('click', exportZip);
     $('exportJsonBtn').addEventListener('click', exportJson);
-    $('importBtn').addEventListener('click', () => $('importFile').click());
+    
+    $('importBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        $('importFile').click();
+    });
+
     $('importFile').addEventListener('change', async (event) => {
         const file = event.target.files && event.target.files[0];
         event.target.value = '';
@@ -2652,8 +2654,13 @@
     workspaceEl.addEventListener('touchstart', (event) => {
         if (event.touches.length !== 1) return;
         const touch = event.touches[0];
-        const isOpen = fileDrawer.classList.contains('open');
         const target = event.target;
+        const isOpen = fileDrawer.classList.contains('open');
+
+        // Не перехватываем свайп, если тапнули по кнопке или полю ввода
+        if (target.closest('button') || target.closest('input') || target.closest('a')) {
+            return;
+        }
 
         if (!isOpen && (target.closest('.line-numbers') || target.closest('.edge-swipe-area'))) {
             gesture = { mode: 'open', startX: touch.clientX, startY: touch.clientY, width: fileDrawer.offsetWidth, locked: false };
