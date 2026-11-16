@@ -9,6 +9,10 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#13131a">
     
+    <!-- Иконки приложения -->
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -171,7 +175,7 @@
             transform: scale(0.96);
         }
 
-        /* --- ТЕЛО РЕДАКТОРА (Здесь теперь лежит меню) --- */
+        /* --- ТЕЛО РЕДАКТОРА --- */
         .editor-body {
             flex: 1;
             display: flex;
@@ -227,7 +231,7 @@
             autocorrect: off;
         }
 
-        /* --- Шторка и затемнение теперь внутри editor-body --- */
+        /* --- Шторка и затемнение --- */
         .drawer-backdrop {
             position: absolute;
             inset: 0;
@@ -659,6 +663,7 @@
     <!-- Шапка с логотипом -->
     <div class="brand-header">
         <button class="logo-btn" id="resetCacheBtn" title="Сбросить кэш и перезагрузить">
+            <!-- Логотип для шапки (горизонтальный). Если его нет, можно заменить на icon.png -->
             <img src="logo.png" alt="CodeDock Studio" class="brand-logo" onerror="this.style.display='none'">
         </button>
     </div>
@@ -673,7 +678,7 @@
         </button>
     </header>
 
-    <!-- Меню и затемнение перенесены сюда, чтобы не перекрывать шапку -->
+    <!-- Меню и затемнение перенесены сюда -->
     <main class="editor-body">
         <div class="line-numbers" id="lineNumbers"></div>
         <textarea class="code-textarea" id="codeEditor" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" inputmode="text" placeholder="// Создайте новый файл в меню слева"></textarea>
