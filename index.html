@@ -26,6 +26,8 @@
             --border: #2c2c3d;
             --danger: #ef4444;
             --success: #4ade80;
+            --info: #38bdf8;
+            --warn: #facc15;
         }
 
         * {
@@ -563,6 +565,86 @@
             background: #fff;
         }
 
+        /* --- КОНСОЛЬ (UI) --- */
+        .console-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40%;
+            background-color: var(--bg-panel);
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transform: translateY(100%);
+            transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+            z-index: 35;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+        }
+
+        .console-panel.open {
+            transform: translateY(0);
+        }
+
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 14px;
+            background-color: var(--bg-main);
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .console-header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .console-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 4px;
+        }
+
+        .console-btn:active {
+            color: var(--accent);
+        }
+
+        .console-output {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 14px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .console-line {
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            display: flex;
+            gap: 6px;
+            align-items: flex-start;
+        }
+
+        .console-line i {
+            margin-top: 2px;
+            font-size: 10px;
+        }
+
+        .console-line.log { color: var(--text-main); }
+        .console-line.info { color: var(--info); }
+        .console-line.warn { color: var(--warn); background: rgba(250, 204, 21, 0.1); }
+        .console-line.error { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+
         .custom-context-menu {
             position: fixed;
             background-color: var(--bg-card);
@@ -762,6 +844,9 @@
                 </button>
             </div>
             <div class="action-group">
+                <button class="btn-action btn-icon" id="consoleBtn" title="Консоль">
+                    <i class="fa-solid fa-terminal"></i>
+                </button>
                 <button class="btn-action btn-save" id="saveProjectBtn">
                     <i class="fa-solid fa-floppy-disk"></i> Сохранить
                 </button>
@@ -775,6 +860,18 @@
             <div class="line-numbers" id="lineNumbers"></div>
             <textarea class="code-textarea" id="codeEditor" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" inputmode="text" placeholder="// Создайте новый файл в меню слева"></textarea>
             <div class="edge-swipe-area" id="edgeSwipeArea"></div>
+        </div>
+
+        <!-- Панель консоли -->
+        <div class="console-panel" id="consolePanel">
+            <div class="console-header">
+                <span><i class="fa-solid fa-terminal"></i> Консоль</span>
+                <div class="console-header-actions">
+                    <button class="console-btn" id="clearConsoleBtn" title="Очистить"><i class="fa-solid fa-trash"></i></button>
+                    <button class="console-btn" id="closeConsoleBtn" title="Закрыть"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+            <div class="console-output" id="consoleOutput"></div>
         </div>
 
         <div class="drawer-backdrop" id="drawerBackdrop"></div>
@@ -832,7 +929,7 @@
                 <i class="fa-solid fa-xmark"></i> В редактор
             </button>
         </div>
-        <iframe class="preview-frame" id="previewFrame" sandbox="allow-scripts allow-modals"></iframe>
+        <iframe class="preview-frame" id="previewFrame" sandbox="allow-scripts allow-modals allow-same-origin"></iframe>
     </div>
 </div>
 
@@ -873,6 +970,105 @@
 </div>
 
 <script>
+    // --- КЛАСС КОНСОЛИ ---
+    const CONSOLE_INJECT_SCRIPT = `
+        (function() {
+            const sendToParent = (type, args) => {
+                try {
+                    const serializedArgs = Array.from(args).map(arg => {
+                        if (typeof arg === 'object' && arg !== null) {
+                            try { return JSON.stringify(arg); } catch(e) { return String(arg); }
+                        }
+                        return String(arg);
+                    });
+                    window.parent.postMessage({ type: 'codedock-console', logType: type, message: serializedArgs.join(' ') }, '*');
+                } catch(e) {}
+            };
+            console.log = (...args) => sendToParent('log', args);
+            console.info = (...args) => sendToParent('info', args);
+            console.warn = (...args) => sendToParent('warn', args);
+            console.error = (...args) => sendToParent('error', args);
+            window.onerror = function(message, source, lineno, colno, error) {
+                sendToParent('error', [message + ' (строка ' + lineno + ')']);
+            };
+        })();
+    `;
+
+    class CodeDockConsole {
+        constructor(panelId, outputId, btnId, closeBtnId, clearBtnId) {
+            this.panel = document.getElementById(panelId);
+            this.output = document.getElementById(outputId);
+            this.btn = document.getElementById(btnId);
+            this.closeBtn = document.getElementById(closeBtnId);
+            this.clearBtn = document.getElementById(clearBtnId);
+
+            this.init();
+        }
+
+        init() {
+            this.btn.addEventListener('click', () => this.toggle());
+            this.closeBtn.addEventListener('click', () => this.close());
+            this.clearBtn.addEventListener('click', () => this.clear());
+
+            window.addEventListener('message', (e) => {
+                if (!e.data || e.data.type !== 'codedock-console') return;
+                this.log(e.data.logType, e.data.message);
+            });
+        }
+
+        toggle() {
+            this.panel.classList.toggle('open');
+            if (this.panel.classList.contains('open')) {
+                setTimeout(() => { this.output.scrollTop = this.output.scrollHeight; }, 300);
+            }
+        }
+
+        open() {
+            this.panel.classList.add('open');
+            setTimeout(() => { this.output.scrollTop = this.output.scrollHeight; }, 300);
+        }
+
+        close() {
+            this.panel.classList.remove('open');
+        }
+
+        clear() {
+            this.output.innerHTML = '';
+        }
+
+        log(type, message) {
+            const line = document.createElement('div');
+            line.className = `console-line ${type}`;
+            
+            let icon = 'fa-angle-right';
+            if (type === 'error') icon = 'fa-circle-exclamation';
+            if (type === 'warn') icon = 'fa-triangle-exclamation';
+            if (type === 'info') icon = 'fa-circle-info';
+
+            // Экранирование HTML
+            const safeMsg = String(message).replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+
+            line.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${safeMsg}</span>`;
+            this.output.appendChild(line);
+            
+            if (this.panel.classList.contains('open')) {
+                this.output.scrollTop = this.output.scrollHeight;
+            }
+        }
+    }
+    // ----------------------
+
+    // Инициализация консоли
+    const consolePanel = new CodeDockConsole(
+        'consolePanel', 
+        'consoleOutput', 
+        'consoleBtn', 
+        'closeConsoleBtn', 
+        'clearConsoleBtn'
+    );
+
     // Регистрация Service Worker
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -880,7 +1076,7 @@
         });
     }
 
-    // Очистка кэша по клику на логотип
+    // Очистка кэша
     document.getElementById('resetCacheBtn').addEventListener('click', async () => {
         const confirmReset = confirm('Очистить кэш и обновить приложение?');
         if (!confirmReset) return;
@@ -917,7 +1113,7 @@
             id: '3',
             name: 'script.js',
             type: 'file',
-            content: 'function sayHi() {\n  alert("Всё работает отлично!");\n}'
+            content: 'function sayHi() {\n  console.log("Привет из CodeDock!");\n  console.warn("Это предупреждение");\n  console.error("А это тестовая ошибка");\n}'
         },
         {
             id: '4',
@@ -1032,12 +1228,10 @@
     function renderEditorAndTabs() {
         const allFiles = getAllFiles(fileSystem);
         
-        // Очищаем openFileIds от несуществующих файлов
         openFileIds = openFileIds.filter(id => allFiles.some(f => f.id === id));
         
         let currentFile = findItemById(fileSystem, activeFileId);
         
-        // Если активного файла нет, но есть открытые вкладки — берем первую
         if (!currentFile && openFileIds.length > 0) {
             activeFileId = openFileIds[0];
             currentFile = findItemById(fileSystem, activeFileId);
@@ -1059,7 +1253,6 @@
                 <div class="tab-close" title="Закрыть"><i class="fa-solid fa-xmark"></i></div>
             `;
 
-            // Клик по самой вкладке
             tab.addEventListener('click', (e) => {
                 if (e.target.closest('.tab-close')) return;
                 activeFileId = file.id;
@@ -1068,11 +1261,9 @@
                 renderTree();
             });
 
-            // Клик по крестику (Автосохранение при закрытии)
             tab.querySelector('.tab-close').addEventListener('click', (e) => {
                 e.stopPropagation();
                 
-                // Принудительно забираем текст из редактора и сохраняем в файл
                 const currentFileData = findItemById(fileSystem, activeFileId);
                 if (currentFileData && !codeEditor.disabled) {
                     currentFileData.content = codeEditor.value;
@@ -1082,7 +1273,7 @@
                 openFileIds = openFileIds.filter(fId => fId !== file.id);
                 if (activeFileId === file.id) {
                     activeFileId = openFileIds.length > 0 ? openFileIds[0] : null;
-                    lastRenderedFileId = null; // Принудительное обновление
+                    lastRenderedFileId = null;
                 }
                 saveState();
                 renderEditorAndTabs();
@@ -1134,7 +1325,6 @@
         }
     });
 
-    // --- Автопонижение регистра ---
     newItemNameInput.addEventListener('input', (e) => {
         let val = e.target.value;
         if (val.length > 0) {
@@ -1148,7 +1338,6 @@
         }
     });
 
-    // --- Кнопки Undo / Redo ---
     document.getElementById('undoBtn').addEventListener('click', () => {
         if (codeEditor.disabled) return;
         codeEditor.focus();
@@ -1163,7 +1352,6 @@
         codeEditor.dispatchEvent(new Event('input'));
     });
 
-    // --- Кнопка Сохранить ---
     const saveBtn = document.getElementById('saveProjectBtn');
     const originalSaveHTML = saveBtn.innerHTML;
     saveBtn.addEventListener('click', () => {
@@ -1180,7 +1368,6 @@
         }, 1500);
     });
 
-    // --- Свайп-логика ---
     let touchStartX = 0;
     let touchStartY = 0;
     let isDraggingDrawer = false;
@@ -1280,7 +1467,6 @@
         drawerBackdrop.style.opacity = '';
     }
 
-    // --- Контекстное меню ---
     let longPressTimer = null;
     let touchMoved = false;
     let lastTapTime = 0;
@@ -1487,6 +1673,11 @@
             doc.querySelectorAll('script[src]').forEach(el => el.remove());
             if (!doc.head) doc.documentElement.insertBefore(doc.createElement('head'), doc.body || null);
 
+            // Внедряем скрипт консоли
+            const script = doc.createElement('script');
+            script.textContent = CONSOLE_INJECT_SCRIPT;
+            doc.head.insertBefore(script, doc.head.firstChild);
+
             cssFiles.forEach(f => {
                 const style = doc.createElement('style');
                 style.textContent = f.content || '';
@@ -1500,6 +1691,8 @@
             html = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
         }
 
+        consolePanel.clear();
+        
         document.getElementById('previewFrame').srcdoc = html;
         document.getElementById('previewOverlay').classList.add('open');
     };
