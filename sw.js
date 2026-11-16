@@ -1,4 +1,4 @@
-const CACHE_NAME = 'codedock-v7'; // <--- ОБНОВЛЕНО
+const CACHE_NAME = 'codedock-v10'; // <--- ОБНОВЛЕНО
 const ASSETS = [
   './',
   './index.html',
