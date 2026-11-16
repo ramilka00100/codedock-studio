@@ -81,6 +81,34 @@
             position: relative;
             z-index: 50;
             flex-shrink: 0;
+            gap: 8px;
+        }
+
+        /* Правая группа в brand-header: save-status + 2 кнопки */
+        .brand-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+            min-width: 0;
+        }
+
+        .brand-right .btn-icon-only {
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+        }
+
+        /* Фиолетовая «запуск/предпросмотр» в brand-header */
+        .btn-icon-only.btn-run {
+            background-color: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            box-shadow: 0 2px 8px var(--accent-glow);
+        }
+        .btn-icon-only.btn-run:active {
+            background-color: var(--accent-hover);
+            border-color: var(--accent-hover);
         }
 
         .logo-btn {
@@ -92,6 +120,7 @@
             align-items: center;
             transition: transform 0.1s, opacity 0.1s;
             -webkit-tap-highlight-color: transparent;
+            flex-shrink: 0;
         }
 
         .logo-btn:active { transform: scale(0.95); opacity: 0.8; }
@@ -104,6 +133,10 @@
             align-items: center;
             gap: 5px;
             min-height: 16px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
         }
 
         .save-status i { font-size: 0.65rem; }
@@ -773,7 +806,16 @@
         <button class="logo-btn" id="resetCacheBtn" title="Сбросить кэш и перезагрузить" aria-label="Сбросить кэш и перезагрузить">
             <img src="logo.png" alt="CodeDock Studio" class="brand-logo">
         </button>
-        <div class="save-status" id="saveStatus" aria-live="polite"></div>
+        <div class="brand-right">
+            <div class="save-status" id="saveStatus" aria-live="polite"></div>
+            <button class="btn-icon-only" id="consoleBtn" title="Консоль" aria-label="Консоль">
+                <i class="fa-solid fa-terminal"></i>
+                <span class="console-dot" id="consoleDot"></span>
+            </button>
+            <button class="btn-icon-only btn-run" id="runProjectBtn" title="Предпросмотр" aria-label="Предпросмотр">
+                <i class="fa-solid fa-play"></i>
+            </button>
+        </div>
     </div>
 
     <header class="editor-topbar">
@@ -798,15 +840,8 @@
                 <button class="btn-action btn-icon" id="settingsBtn" title="Настройки" aria-label="Настройки">
                     <i class="fa-solid fa-gear"></i>
                 </button>
-                <button class="btn-action btn-icon" id="consoleBtn" title="Консоль" aria-label="Консоль">
-                    <i class="fa-solid fa-terminal"></i>
-                    <span class="console-dot" id="consoleDot"></span>
-                </button>
                 <button class="btn-action btn-icon" id="saveProjectBtn" title="Сохранить" aria-label="Сохранить">
                     <i class="fa-solid fa-floppy-disk"></i>
-                </button>
-                <button class="btn-action btn-icon btn-run" id="runProjectBtn" title="Запуск" aria-label="Запуск">
-                    <i class="fa-solid fa-play"></i>
                 </button>
             </div>
         </div>
@@ -890,16 +925,12 @@
                 <i class="fa-solid fa-globe" style="color:var(--accent);margin-right:6px;"></i>Предпросмотр
             </span>
             <div style="display:flex;gap:8px;align-items:center;">
-                <!-- Кнопка консоли в превью -->
                 <button class="btn-icon-only" id="previewConsoleBtn" title="Консоль" aria-label="Консоль" style="width:32px;height:32px;">
                     <i class="fa-solid fa-terminal"></i>
                     <span class="console-dot" id="previewConsoleDot"></span>
                 </button>
-                <button class="btn-icon-only" id="previewReloadBtn" title="Перезапустить" aria-label="Перезапустить" style="width:32px;height:32px;">
-                    <i class="fa-solid fa-rotate"></i>
-                </button>
-                <button class="btn-primary" id="closePreviewBtn" style="padding:6px 12px;">
-                    <i class="fa-solid fa-xmark"></i> В редактор
+                <button class="btn-icon-only" id="closePreviewBtn" title="В редактор" aria-label="В редактор" style="width:32px;height:32px;">
+                    <i class="fa-solid fa-arrow-left"></i>
                 </button>
             </div>
         </div>
@@ -1776,7 +1807,6 @@
     }
 
     $('runProjectBtn').addEventListener('click', runProject);
-    $('previewReloadBtn').addEventListener('click', runProject);
     $('closePreviewBtn').addEventListener('click', () => $('previewOverlay').classList.remove('open'));
 
     // --- ЭКСПОРТ / ИМПОРТ ---
@@ -2022,480 +2052,4 @@
                         <span>${escapeHtml(item.name)}</span>
                     </div>
                     <div class="tree-actions">
-                        <button class="action-icon" data-action="create" aria-label="Создать внутри"><i class="fa-solid fa-plus"></i></button>
-                        <button class="action-icon" data-action="rename" aria-label="Переименовать"><i class="fa-solid fa-pen"></i></button>
-                        <button class="action-icon delete" data-action="delete" aria-label="Удалить"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                `;
-                const children = document.createElement('div');
-                children.className = `folder-children ${item.isOpen ? 'open' : ''}`;
-
-                header.addEventListener('click', (event) => {
-                    const button = event.target.closest('button[data-action]');
-                    if (button) {
-                        event.stopPropagation();
-                        if (button.dataset.action === 'create') openCreateInFolder(item.id);
-                        else if (button.dataset.action === 'rename') openRenameModal(item.id);
-                        else deleteItem(item.id);
-                        return;
-                    }
-                    if (query) return;
-                    const real = findItemById(fileSystem, item.id);
-                    if (real) { real.isOpen = !real.isOpen; saveNow(); renderTree(); }
-                });
-
-                wrapper.appendChild(header);
-                wrapper.appendChild(children);
-                parentElement.appendChild(wrapper);
-                if (item.children && item.children.length) createNodes(item.children, children);
-            });
-        };
-
-        createNodes(visible, fileTreeEl);
-        statsTextEl.textContent = `Файлов: ${fileCount} | Папок: ${folderCount}`;
-    }
-
-    function filterTree(items, query) {
-        if (!query) return items;
-        const result = [];
-        for (const item of items) {
-            if (item.type === 'file') {
-                if (item.name.toLowerCase().includes(query)) result.push(item);
-            } else {
-                const children = filterTree(item.children || [], query);
-                if (item.name.toLowerCase().includes(query) || children.length) {
-                    result.push({ ...item, isOpen: true, children });
-                }
-            }
-        }
-        return result;
-    }
-
-    // --- МОДАЛКИ ---
-    const createModal = $('createModal');
-    const newItemNameInput = $('newItemName');
-    const parentFolderSelect = $('parentFolderSelect');
-    const modalTitle = $('modalTitle');
-    const typeSelector = $('typeSelector');
-    const parentFolderField = $('parentFolderField');
-
-    let creatingType = 'file';
-    let editingItemId = null;
-    let modalParentId = null;
-
-    function populateFolderSelect(selectedId = 'root') {
-        parentFolderSelect.innerHTML = '<option value="root">/ (Корень проекта)</option>';
-        const traverse = (items, prefix = '') => {
-            items.forEach((item) => {
-                if (item.type === 'folder') {
-                    const option = document.createElement('option');
-                    option.value = item.id;
-                    option.textContent = `${prefix}/${item.name}`;
-                    parentFolderSelect.appendChild(option);
-                    if (item.children) traverse(item.children, `${prefix}/${item.name}`);
-                }
-            });
-        };
-        traverse(fileSystem);
-        parentFolderSelect.value = selectedId;
-    }
-
-    function openCreateModal(parentId = 'root') {
-        editingItemId = null;
-        modalParentId = parentId;
-        creatingType = 'file';
-        document.querySelectorAll('.type-btn').forEach((button) => button.classList.toggle('active', button.dataset.type === 'file'));
-        modalTitle.textContent = 'Новый элемент';
-        typeSelector.style.display = 'flex';
-        parentFolderField.style.display = 'flex';
-        populateFolderSelect(parentId);
-        newItemNameInput.value = '';
-        createModal.classList.add('open');
-        pushGuard();
-        setTimeout(() => newItemNameInput.focus(), 60);
-    }
-
-    function openCreateInFolder(folderId) { openCreateModal(folderId); }
-
-    function openRenameModal(id) {
-        const item = findItemById(fileSystem, id);
-        if (!item) return;
-        editingItemId = id;
-        modalParentId = (getParent(fileSystem, id) || {}).id || null;
-        modalTitle.textContent = 'Переименовать';
-        typeSelector.style.display = 'none';
-        parentFolderField.style.display = 'none';
-        newItemNameInput.value = item.name;
-        createModal.classList.add('open');
-        pushGuard();
-        setTimeout(() => { newItemNameInput.focus(); newItemNameInput.select(); }, 60);
-    }
-
-    function closeCreateModal() { createModal.classList.remove('open'); editingItemId = null; }
-
-    $('openCreateModal').addEventListener('click', () => openCreateModal('root'));
-    $('cancelModal').addEventListener('click', closeCreateModal);
-    createModal.addEventListener('click', (event) => { if (event.target === createModal) closeCreateModal(); });
-    document.querySelectorAll('.type-btn').forEach((button) => {
-        button.addEventListener('click', () => {
-            document.querySelectorAll('.type-btn').forEach((item) => item.classList.remove('active'));
-            button.classList.add('active');
-            creatingType = button.dataset.type;
-        });
-    });
-
-    function handleSaveItem() {
-        const raw = newItemNameInput.value.trim();
-        if (!raw) return;
-        const name = raw.replace(/[/\\]/g, '-');
-
-        if (editingItemId) {
-            const item = findItemById(fileSystem, editingItemId);
-            if (!item) return;
-            if (nameExists(modalParentId, name, editingItemId)) { toast('Такое имя уже есть.', { type: 'error' }); return; }
-            if (item.name !== name) { item.name = name; saveNow(true); }
-            closeCreateModal();
-            renderEditorAndTabs();
-            return;
-        }
-
-        const parentId = parentFolderSelect.value === 'root' ? null : parentFolderSelect.value;
-        if (parentId && !findItemById(fileSystem, parentId)) { toast('Папка не существует.', { type: 'error' }); return; }
-        if (nameExists(parentId, name, null)) { toast('Элемент уже существует.', { type: 'error' }); return; }
-
-        const item = { id: genId(), name, type: creatingType, ...(creatingType === 'folder' ? { isOpen: true, children: [] } : { content: '' }) };
-        if (parentId) {
-            const parent = findItemById(fileSystem, parentId);
-            parent.isOpen = true;
-            parent.children.push(item);
-        } else {
-            fileSystem.push(item);
-        }
-
-        if (creatingType === 'file') {
-            activeFileId = item.id;
-            if (!openFileIds.includes(item.id)) openFileIds.push(item.id);
-            closeDrawer();
-        }
-        saveNow(true);
-        closeCreateModal();
-        renderEditorAndTabs();
-    }
-
-    $('confirmCreate').addEventListener('click', handleSaveItem);
-    newItemNameInput.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') handleSaveItem();
-        if (event.key === 'Escape') closeCreateModal();
-    });
-
-    function deleteItem(id) {
-        const item = findItemById(fileSystem, id);
-        if (!item) return;
-        const snapshot = clone(item);
-        const parent = getParent(fileSystem, id);
-        const parentId = parent ? parent.id : null;
-        const index = siblingsOf(parentId).findIndex((entry) => entry.id === id);
-
-        const result = removeItemById(id);
-        if (!result) return;
-
-        const remaining = getAllFiles(fileSystem);
-        openFileIds = openFileIds.filter((fileId) => remaining.some((file) => file.id === fileId));
-        if (!remaining.some((file) => file.id === activeFileId)) {
-            activeFileId = openFileIds.length ? openFileIds[0] : null;
-        }
-        saveNow(true);
-        renderEditorAndTabs();
-
-        toast(`Удалено: ${snapshot.name}`, {
-            type: 'warn',
-            duration: 7000,
-            action: { label: 'Отменить', onClick: () => {
-                if (insertItem(snapshot, parentId, Math.max(0, index))) {
-                    saveNow(true);
-                    renderEditorAndTabs();
-                    toast('Восстановлено.', { type: 'success' });
-                } else { toast('Папка удалена.', { type: 'error' }); }
-            }},
-        });
-    }
-
-    $('collapseAllBtn').addEventListener('click', () => {
-        const collapse = (items) => {
-            items.forEach((item) => {
-                if (item.type === 'folder') { item.isOpen = false; if (item.children) collapse(item.children); }
-            });
-        };
-        collapse(fileSystem);
-        saveNow();
-        renderTree();
-    });
-
-    $('fileSearch').addEventListener('input', () => renderTree());
-
-    // --- ЖЕСТЫ И КОНТЕКСТНОЕ МЕНЮ ---
-    const fileDrawer = $('fileDrawer');
-    const drawerBackdrop = $('drawerBackdrop');
-    const customContextMenu = $('customContextMenu');
-
-    let gesture = null;
-    const workspaceEl = $('workspace');
-
-    function openDrawer() { fileDrawer.classList.add('open'); drawerBackdrop.classList.add('open'); pushGuard(); }
-    function closeDrawer() { fileDrawer.classList.remove('open'); drawerBackdrop.classList.remove('open'); }
-
-    $('openDrawerBtn').addEventListener('click', openDrawer);
-    $('closeDrawerBtn').addEventListener('click', closeDrawer);
-    drawerBackdrop.addEventListener('click', closeDrawer);
-
-    // Обновленная логика свайпа (с capture: true и расширенной зоной)
-    workspaceEl.addEventListener('touchstart', (event) => {
-        if (event.touches.length !== 1) return;
-        const touch = event.touches[0];
-        const target = event.target;
-        const isOpen = fileDrawer.classList.contains('open');
-
-        if (target.closest('button') || target.closest('input') || target.closest('a')) return;
-
-        // Разрешаем свайп с любого места в редакторе кода
-        const isEditor = target.closest('.CodeMirror') || target.closest('.editor-content') || target.closest('.edge-swipe-area');
-
-        if (!isOpen && isEditor) {
-            gesture = { mode: 'open', startX: touch.clientX, startY: touch.clientY, width: fileDrawer.offsetWidth, locked: false };
-        } else if (isOpen && target.closest('.file-drawer')) {
-            gesture = { mode: 'close', startX: touch.clientX, startY: touch.clientY, width: fileDrawer.offsetWidth, locked: false };
-        }
-        
-        if (gesture) {
-            fileDrawer.style.transition = 'none';
-            drawerBackdrop.style.transition = 'none';
-        }
-    }, { passive: true, capture: true });
-
-    workspaceEl.addEventListener('touchmove', (event) => {
-        if (!gesture) return;
-        const touch = event.touches[0];
-        const deltaX = touch.clientX - gesture.startX;
-        const deltaY = touch.clientY - gesture.startY;
-
-        if (!gesture.locked) {
-            if (Math.abs(deltaX) > Math.abs(deltaY) + 6) gesture.locked = true;
-            else if (Math.abs(deltaY) > Math.abs(deltaX) + 6) {
-                resetDrawerStyle();
-                gesture = null;
-                return;
-            }
-        }
-        if (!gesture.locked) return;
-
-        event.preventDefault(); // Блокируем скролл и выделение при горизонтальном свайпе
-        
-        if (gesture.mode === 'open' && deltaX > 0) {
-            const move = Math.min(deltaX, gesture.width);
-            fileDrawer.style.transform = `translateX(${-gesture.width + move}px)`;
-            drawerBackdrop.style.opacity = String(move / gesture.width);
-        } else if (gesture.mode === 'close' && deltaX < 0) {
-            const move = Math.min(Math.abs(deltaX), gesture.width);
-            fileDrawer.style.transform = `translateX(${-move}px)`;
-            drawerBackdrop.style.opacity = String(1 - move / gesture.width);
-        }
-    }, { passive: false, capture: true });
-
-    workspaceEl.addEventListener('touchend', (event) => {
-        if (!gesture) return;
-        const { mode, startX, width, locked } = gesture;
-        const deltaX = event.changedTouches[0].clientX - startX;
-        resetDrawerStyle();
-        gesture = null;
-        if (!locked) return;
-        if (mode === 'open') deltaX > width * 0.3 ? openDrawer() : closeDrawer();
-        else deltaX < -(width * 0.3) ? closeDrawer() : openDrawer();
-    }, { capture: true });
-
-    function resetDrawerStyle() {
-        fileDrawer.style.transition = '';
-        drawerBackdrop.style.transition = '';
-        fileDrawer.style.transform = '';
-        drawerBackdrop.style.opacity = '';
-    }
-
-    function showContextMenu(x, y) {
-        customContextMenu.classList.add('open');
-        const rect = customContextMenu.getBoundingClientRect();
-        const left = Math.min(Math.max(10, x), window.innerWidth - rect.width - 10);
-        const top = Math.min(Math.max(10, y), window.innerHeight - rect.height - 10);
-        customContextMenu.style.left = `${left}px`;
-        customContextMenu.style.top = `${top}px`;
-        pushGuard();
-    }
-
-    function hideContextMenu() { customContextMenu.classList.remove('open'); }
-
-    if (cmView) {
-        cmView.getWrapperElement().addEventListener('contextmenu', (event) => {
-            event.preventDefault();
-            showContextMenu(event.clientX, event.clientY);
-        });
-        
-        let longPressTimer = null;
-        let touchMoved = false;
-        let lastTapTime = 0;
-        let lastTapX = 0;
-        let lastTapY = 0;
-
-        cmView.getWrapperElement().addEventListener('touchstart', (event) => {
-            if (event.touches.length !== 1) return;
-            const touch = event.touches[0];
-            const now = Date.now();
-            touchMoved = false;
-            if (now - lastTapTime < 300 && Math.abs(touch.clientX - lastTapX) < 40 && Math.abs(touch.clientY - lastTapY) < 40) {
-                clearTimeout(longPressTimer);
-                lastTapTime = 0;
-                showContextMenu(touch.clientX, touch.clientY);
-                return;
-            }
-            lastTapTime = now;
-            lastTapX = touch.clientX;
-            lastTapY = touch.clientY;
-            clearTimeout(longPressTimer);
-            longPressTimer = setTimeout(() => { if (!touchMoved) showContextMenu(touch.clientX, touch.clientY); }, 650);
-        }, { passive: true });
-
-        cmView.getWrapperElement().addEventListener('touchmove', () => { touchMoved = true; clearTimeout(longPressTimer); }, { passive: true });
-        cmView.getWrapperElement().addEventListener('touchend', () => clearTimeout(longPressTimer));
-    }
-
-    window.addEventListener('pointerdown', (event) => { if (!customContextMenu.contains(event.target)) hideContextMenu(); });
-
-    $('ctxSelectAll').addEventListener('pointerdown', (event) => {
-        event.preventDefault();
-        if (!cmView) return;
-        cmView.execCommand("selectAll");
-        cmView.focus();
-        hideContextMenu();
-    });
-
-    $('ctxCut').addEventListener('pointerdown', (event) => {
-        event.preventDefault();
-        if (!cmView) return;
-        const text = cmView.getSelection();
-        if (text) {
-            navigator.clipboard.writeText(text).catch(() => {});
-            cmView.replaceSelection("");
-        }
-        hideContextMenu();
-    });
-
-    $('ctxCopy').addEventListener('pointerdown', (event) => {
-        event.preventDefault();
-        if (!cmView) return;
-        const text = cmView.getSelection() || cmView.getValue();
-        navigator.clipboard.writeText(text).catch(() => {});
-        hideContextMenu();
-    });
-
-    $('ctxPaste').addEventListener('pointerdown', async (event) => {
-        event.preventDefault();
-        hideContextMenu();
-        try {
-            if (!navigator.clipboard || !navigator.clipboard.readText) throw new Error('Буфер обмена недоступен');
-            const text = await navigator.clipboard.readText();
-            if (cmView) {
-                cmView.replaceSelection(text);
-            }
-        } catch (error) {
-            toast('Вставка недоступна.', { type: 'warn' });
-        }
-    });
-
-    $('ctxClear').addEventListener('pointerdown', (event) => {
-        event.preventDefault();
-        if (cmView) {
-            cmView.setValue("");
-        }
-        hideContextMenu();
-    });
-
-    $('undoBtn').addEventListener('click', () => { if (cmView) { cmView.undo(); cmView.focus(); } });
-    $('redoBtn').addEventListener('click', () => { if (cmView) { cmView.redo(); cmView.focus(); } });
-
-    $('symbolBar').addEventListener('click', (event) => {
-        const button = event.target.closest('.sym-btn');
-        if (!button || !cmView) return;
-        const sym = button.dataset.sym;
-        cmView.replaceSelection(sym);
-        cmView.focus();
-    });
-
-    let guardPushed = false;
-
-    function pushGuard() {
-        if (guardPushed) return;
-        guardPushed = true;
-        window.history.pushState({ codedock: true }, '');
-    }
-
-    function closeTopPanel() {
-        if (customContextMenu.classList.contains('open')) { hideContextMenu(); return true; }
-        if ($('confirmModal').classList.contains('open')) { $('confirmModal').classList.remove('open'); return true; }
-        if (createModal.classList.contains('open')) { closeCreateModal(); return true; }
-        if (settingsModal.classList.contains('open')) { settingsModal.classList.remove('open'); return true; }
-        if ($('previewOverlay').classList.contains('open')) { $('previewOverlay').classList.remove('open'); return true; }
-        if (consolePanel.panel.classList.contains('open')) { consolePanel.close(); return true; }
-        if (fileDrawer.classList.contains('open')) { closeDrawer(); return true; }
-        if (searchPanel.classList.contains('open')) { closeSearch(); return true; }
-        return false;
-    }
-
-    window.history.pushState({ codedock: true }, '');
-    guardPushed = true;
-
-    window.addEventListener('popstate', () => {
-        guardPushed = false;
-        if (closeTopPanel()) pushGuard();
-    });
-
-    $('resetCacheBtn').addEventListener('click', async () => {
-        const ok = await confirmAction('Очистить кэш?', 'Приложение загрузит свежую версию. Файлы проекта сохранятся.');
-        if (!ok) return;
-        try {
-            if ('caches' in window) {
-                const names = await caches.keys();
-                await Promise.all(names.map((name) => caches.delete(name)));
-            }
-            if ('serviceWorker' in navigator) {
-                const registrations = await navigator.serviceWorker.getRegistrations();
-                await Promise.all(registrations.map((registration) => registration.unregister()));
-            }
-            const url = new URL(window.location.href);
-            url.searchParams.set('nocache', String(Date.now()));
-            window.location.replace(url.toString());
-        } catch (error) {
-            toast(`Ошибка сброса кэша: ${error.message}`, { type: 'error' });
-        }
-    });
-
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', async () => {
-            try {
-                // Оставили только основной sw.js, sw-preview.js убран
-                await navigator.serviceWorker.register('sw.js');
-            } catch (error) {
-                console.warn('Ошибка регистрации Service Worker:', error.message);
-            }
-        });
-    }
-
-    function renderAll() { renderEditorAndTabs(); }
-
-    createEditor();
-    loadUiSettings();
-    loadProject();
-    renderAll();
-    saveNow(true);
-    setSaveStatus('saved', '<i class="fa-solid fa-check"></i> Готово');
-
-    window.__codedock = { version: APP_VERSION, getFileSystem: () => fileSystem, loadProject };
-</script>
-</body>
-</html>
+                        <button class="action-icon" data-action="create" aria-label="Создать внутри"><i class="fa-solid fa-plus
