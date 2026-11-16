@@ -1,9 +1,10 @@
-const CACHE_NAME = 'codedock-v1';
+const CACHE_NAME = 'codedock-v2'; // <--- Изменили версию с v1 на v2
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './logo.png'
+  './logo.png',
+  './icon.png'
 ];
 
 // Установка SW и кэширование базовых ресурсов
@@ -20,7 +21,7 @@ self.addEventListener('activate', (e) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) return caches.delete(key);
+          if (key !== CACHE_NAME) return caches.delete(key); // Удаляем старый v1
         })
       );
     }).then(() => self.clients.claim())
@@ -46,4 +47,4 @@ self.addEventListener('fetch', (e) => {
         return caches.match(e.request);
       })
   );
-}); 
+});
