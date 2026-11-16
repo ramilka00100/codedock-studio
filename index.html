@@ -211,32 +211,13 @@
         /* --- КОНТЕЙНЕР РЕДАКТОРА --- */
         .editor-content { flex: 1; display: flex; position: relative; overflow: hidden; }
 
-        .line-numbers {
-            width: 46px;
-            flex-shrink: 0;
-            padding: 14px 0 40px 0;
-            background-color: #101016;
-            color: #52566b;
-            font-family: var(--editor-font-family);
-            font-size: var(--editor-font-size);
-            line-height: 21px;
-            text-align: right;
-            user-select: none;
-            overflow: hidden;
-            border-right: 1px solid var(--border);
-            touch-action: pan-y;
-            z-index: 3;
-        }
-
-        .line-num-row { height: 21px; padding-right: 8px; display: block; }
-        .line-num-row.active-line { color: var(--accent); font-weight: 700; background-color: rgba(139, 92, 246, 0.1); }
-
         /* CodeMirror контейнер */
         #codeEditor {
             flex: 1;
             overflow: hidden;
             position: relative;
             height: 100%;
+            z-index: 2;
         }
 
         /* Стилизация CodeMirror под тему приложения */
@@ -257,10 +238,6 @@
             caret-color: var(--accent);
         }
 
-        .cm-editor .cm-line {
-            padding: 0;
-        }
-
         /* Настройки переноса */
         .cm-editor .cm-lineWrapping {
             white-space: pre-wrap;
@@ -277,21 +254,18 @@
         .cm-scroller::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
         .cm-scroller::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-        /* Подсветка синтаксиса (Кастомная) */
-        .cm-editor .cm-keyword { color: #c678dd; }
-        .cm-editor .cm-operator { color: #56b6c2; }
-        .cm-editor .cm-variableName { color: #e5c07b; }
-        .cm-editor .cm-variableName.cm-propertyName { color: #e06c75; }
-        .cm-editor .cm-number { color: #d19a66; }
-        .cm-editor .cm-string { color: #98c379; }
-        .cm-editor .cm-comment { color: #5c6370; font-style: italic; }
-        .cm-editor .cm-tagName { color: #e06c75; }
-        .cm-editor .cm-attributeName { color: #d19a66; }
-        .cm-editor .cm-attributeValue { color: #98c379; }
-        .cm-editor .cm-def { color: #61afef; }
-        .cm-editor .cm-typeName { color: #e5c07b; }
-        .cm-editor .cm-punctuation { color: #abb2bf; }
-        .cm-editor .cm-bracket { color: #abb2bf; }
+        /* Встроенные гуттеры (номера строк) */
+        .cm-editor .cm-gutters {
+            background-color: #101016 !important;
+            border-right: 1px solid var(--border) !important;
+            color: #52566b;
+            padding-left: 4px;
+        }
+        
+        .cm-editor .cm-activeLineGutter {
+            background-color: rgba(139, 92, 246, 0.1) !important;
+            color: var(--accent);
+        }
 
         .edge-swipe-area { position: absolute; left: 0; top: 0; bottom: 0; width: 12px; z-index: 15; touch-action: pan-y; }
 
@@ -865,7 +839,6 @@
         </div>
 
         <div class="editor-content">
-            <div class="line-numbers" id="lineNumbers" aria-hidden="true"></div>
             <!-- Контейнер для CodeMirror -->
             <div id="codeEditor">
                 <!-- Фолбэк на случай ошибки загрузки CDN -->
@@ -1041,22 +1014,42 @@
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 <input type="file" id="importFile" accept=".json,application/json" class="hidden-file-input">
 
+<!-- IMPORT MAP ДЛЯ ФИКСАЦИИ ВЕРСИЙ CODEMIRROR -->
+<script type="importmap">
+{
+  "imports": {
+    "@codemirror/state": "https://esm.sh/@codemirror/state@6.4.1",
+    "@codemirror/view": "https://esm.sh/@codemirror/view@6.26.3",
+    "@codemirror/commands": "https://esm.sh/@codemirror/commands@6.3.3",
+    "@codemirror/search": "https://esm.sh/@codemirror/search@6.5.6",
+    "@codemirror/autocomplete": "https://esm.sh/@codemirror/autocomplete@6.15.0",
+    "@codemirror/language": "https://esm.sh/@codemirror/language@6.10.1",
+    "@codemirror/lint": "https://esm.sh/@codemirror/lint@6.5.0",
+    "@codemirror/lang-html": "https://esm.sh/@codemirror/lang-html@6.4.9",
+    "@codemirror/lang-css": "https://esm.sh/@codemirror/lang-css@6.2.1",
+    "@codemirror/lang-javascript": "https://esm.sh/@codemirror/lang-javascript@6.2.2",
+    "@codemirror/lang-json": "https://esm.sh/@codemirror/lang-json@6.0.1",
+    "@lezer/highlight": "https://esm.sh/@lezer/highlight@1.2.0"
+  }
+}
+</script>
+
 <script type="module">
-    // ВСЕ ИМПОРТЫ СТРОГО В НАЧАЛЕ
-    import { EditorState, Compartment } from 'https://esm.sh/@codemirror/state@6.4.1';
-    import { EditorView, keymap, lineNumbers, highlightActiveLineGutter, drawSelection, highlightSpecialChars, rectangularSelection, crosshairCursor, dropCursor, highlightActiveLine } from 'https://esm.sh/@codemirror/view@6.26.3';
-    import { defaultKeymap, history, historyKeymap, indentWithTab } from 'https://esm.sh/@codemirror/commands@6.3.3';
-    import { searchKeymap, highlightSelectionMatches } from 'https://esm.sh/@codemirror/search@6.5.6';
-    import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from 'https://esm.sh/@codemirror/autocomplete@6.15.0';
-    import { foldGutter, foldKeymap, indentOnInput, syntaxHighlighting, bracketMatching, HighlightStyle } from 'https://esm.sh/@codemirror/language@6.10.1';
-    import { tags } from 'https://esm.sh/@lezer/highlight@1.2.0';
-    import { lintKeymap } from 'https://esm.sh/@codemirror/lint@6.5.0';
+    // ИСПОЛЬЗУЕМ КОРОТКИЕ ИМЕНА (БЛАГОДАРЯ IMPORTMAP)
+    import { EditorState, Compartment } from '@codemirror/state';
+    import { EditorView, keymap, lineNumbers, highlightActiveLineGutter, drawSelection, highlightSpecialChars, rectangularSelection, crosshairCursor, dropCursor, highlightActiveLine } from '@codemirror/view';
+    import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo } from '@codemirror/commands';
+    import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
+    import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
+    import { foldGutter, foldKeymap, indentOnInput, syntaxHighlighting, bracketMatching, HighlightStyle } from '@codemirror/language';
+    import { tags } from '@lezer/highlight';
+    import { lintKeymap } from '@codemirror/lint';
     
     // Языки
-    import { html } from 'https://esm.sh/@codemirror/lang-html@6.4.9';
-    import { css } from 'https://esm.sh/@codemirror/lang-css@6.2.1';
-    import { javascript } from 'https://esm.sh/@codemirror/lang-javascript@6.2.2';
-    import { json } from 'https://esm.sh/@codemirror/lang-json@6.0.1';
+    import { html } from '@codemirror/lang-html';
+    import { css } from '@codemirror/lang-css';
+    import { javascript } from '@codemirror/lang-javascript';
+    import { json } from '@codemirror/lang-json';
 
     'use strict';
 
@@ -1181,11 +1174,8 @@
                             const file = findItemById(fileSystem, activeFileId);
                             if (file) file.content = update.state.doc.toString();
                             scheduleSave();
-                            updateLineNumbers();
+                            $('linesCountText').textContent = `Строк: ${update.state.doc.lines}`;
                             refreshSearchResults();
-                        }
-                        if (update.selectionSet) {
-                            updateActiveLineNumber();
                         }
                     })
                 ]
@@ -1457,44 +1447,6 @@
     const tabsBar = $('tabsBar');
     const fileTreeEl = $('fileTree');
     const statsTextEl = $('statsText');
-    const linesCountText = $('linesCountText');
-    const lineNumbersEl = $('lineNumbers');
-
-    let renderedLineCount = 0;
-    let activeLineNumber = 0;
-    let lineNodes = [];
-
-    function updateActiveLineNumber() {
-        if (!cmView) return;
-        const pos = cmView.state.selection.main.head;
-        const line = cmView.state.doc.lineAt(pos).number;
-        if (line === activeLineNumber) return;
-        if (lineNodes[activeLineNumber - 1]) lineNodes[activeLineNumber - 1].classList.remove('active-line');
-        if (lineNodes[line - 1]) lineNodes[line - 1].classList.add('active-line');
-        activeLineNumber = line;
-    }
-
-    function updateLineNumbers(force = false) {
-        if (!cmView) return;
-        const total = cmView.state.doc.lines;
-        if (force || total !== renderedLineCount) {
-            const fragment = document.createDocumentFragment();
-            lineNodes = [];
-            for (let i = 1; i <= total; i += 1) {
-                const span = document.createElement('span');
-                span.className = 'line-num-row';
-                span.textContent = String(i);
-                lineNodes.push(span);
-                fragment.appendChild(span);
-            }
-            lineNumbersEl.innerHTML = '';
-            lineNumbersEl.appendChild(fragment);
-            renderedLineCount = total;
-            activeLineNumber = 0;
-            linesCountText.textContent = `Строк: ${total}`;
-        }
-        updateActiveLineNumber();
-    }
 
     // --- УПРАВЛЕНИЕ ВКЛАДКАМИ И РЕДАКТОРОМ ---
     function syncEditorFromModel() {
@@ -1502,14 +1454,11 @@
         if (!file) {
             setEditorContent('');
             setEditorLanguage('plaintext');
-            renderedLineCount = 0;
-            lineNumbersEl.innerHTML = '';
-            linesCountText.textContent = 'Строк: 0';
+            $('linesCountText').textContent = 'Строк: 0';
             return;
         }
         setEditorContent(file.content || '');
         setEditorLanguage(file.name);
-        updateLineNumbers(true);
     }
 
     function renderTabs() {
@@ -1571,7 +1520,6 @@
         openFileIds = openFileIds.filter((fileId) => fileId !== id);
         if (activeFileId === id) {
             activeFileId = openFileIds.length ? openFileIds[0] : null;
-            renderedLineCount = 0;
         }
         saveNow();
         renderEditorAndTabs();
@@ -1645,7 +1593,6 @@
             scrollIntoView: true
         });
         searchCount.textContent = `${searchIndex + 1}/${searchMatches.length}`;
-        updateActiveLineNumber();
     }
 
     function replaceCurrent() {
@@ -1656,7 +1603,6 @@
             changes: { from: match.start, to: match.end, insert: replacement }
         });
         saveNow();
-        updateLineNumbers(true);
         searchMatches = computeMatches();
         if (searchIndex >= searchMatches.length) searchIndex = searchMatches.length - 1;
         searchCount.textContent = searchMatches.length ? `${searchIndex + 1}/${searchMatches.length}` : '0/0';
@@ -1671,7 +1617,6 @@
         const newValue = value.split(query).join(replaceInput.value);
         setEditorContent(newValue);
         saveNow();
-        updateLineNumbers(true);
         refreshSearchResults();
         toast(`Заменено вхождений: ${count}`, { type: 'success' });
     }
@@ -1694,7 +1639,6 @@
     function applyUiSettings() {
         const root = document.documentElement;
         root.style.setProperty('--editor-font-size', `${uiSettings.fontSize}px`);
-        root.style.setProperty('--editor-tab-size', String(uiSettings.tabSize));
         if (cmView) {
             cmView.dispatch({
                 effects: [
@@ -1703,8 +1647,6 @@
                 ]
             });
         }
-        renderedLineCount = 0;
-        updateLineNumbers(true);
     }
 
     function loadUiSettings() {
@@ -2271,7 +2213,6 @@
         if (creatingType === 'file') {
             activeFileId = item.id;
             if (!openFileIds.includes(item.id)) openFileIds.push(item.id);
-            renderedLineCount = 0;
             closeDrawer();
         }
         saveNow(true);
@@ -2300,7 +2241,6 @@
         openFileIds = openFileIds.filter((fileId) => remaining.some((file) => file.id === fileId));
         if (!remaining.some((file) => file.id === activeFileId)) {
             activeFileId = openFileIds.length ? openFileIds[0] : null;
-            renderedLineCount = 0;
         }
         saveNow(true);
         renderEditorAndTabs();
@@ -2354,7 +2294,7 @@
 
         if (target.closest('button') || target.closest('input') || target.closest('a')) return;
 
-        if (!isOpen && (target.closest('.line-numbers') || target.closest('.edge-swipe-area'))) {
+        if (!isOpen && (target.closest('.cm-gutters') || target.closest('.edge-swipe-area'))) {
             gesture = { mode: 'open', startX: touch.clientX, startY: touch.clientY, width: fileDrawer.offsetWidth, locked: false };
         } else if (isOpen && target.closest('.file-drawer')) {
             gesture = { mode: 'close', startX: touch.clientX, startY: touch.clientY, width: fileDrawer.offsetWidth, locked: false };
@@ -2512,8 +2452,8 @@
     });
 
     // --- КНОПКИ ИНСТРУМЕНТОВ ---
-    $('undoBtn').addEventListener('click', () => { if (cmView) cmView.focus(); });
-    $('redoBtn').addEventListener('click', () => { if (cmView) cmView.focus(); });
+    $('undoBtn').addEventListener('click', () => { if (cmView) { undo(cmView); cmView.focus(); } });
+    $('redoBtn').addEventListener('click', () => { if (cmView) { redo(cmView); cmView.focus(); } });
 
     $('symbolBar').addEventListener('click', (event) => {
         const button = event.target.closest('.sym-btn');
