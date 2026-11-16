@@ -439,13 +439,13 @@
 
         .preview-frame { flex: 1; width: 100%; border: none; background: #fff; }
 
-        /* ПАНЕЛЬ КОНСОЛИ - ТЕПЕРЬ ВЫШЕ ПРЕВЬЮ */
+        /* ПАНЕЛЬ КОНСОЛИ - ВЫШЕ ПРЕВЬЮ */
         .console-panel {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            height: 45%; /* Чуть увеличил для удобства */
+            height: 45%;
             background-color: var(--bg-panel);
             border-top: 1px solid var(--border);
             display: flex;
@@ -905,7 +905,7 @@
         <iframe class="preview-frame" id="previewFrame" title="Предпросмотр проекта" sandbox="allow-scripts allow-modals"></iframe>
     </div>
 
-    <!-- ПАНЕЛЬ КОНСОЛИ (теперь поверх всего) -->
+    <!-- ПАНЕЛЬ КОНСОЛИ -->
     <div class="console-panel" id="consolePanel" aria-label="Консоль">
         <div class="console-header">
             <span><i class="fa-solid fa-terminal"></i> Консоль</span>
@@ -1706,13 +1706,9 @@
         const htmlFile = files.find((f) => f.name.toLowerCase() === 'index.html') || files.find((f) => f.name.toLowerCase().endsWith('.html'));
         if (!htmlFile) { toast('Файл index.html не найден.', { type: 'error' }); return; }
 
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage({ type: 'SET_PREVIEW_FILES', files: files.map((f) => ({ name: f.name, path: f.path, content: f.content })) });
-            $('previewFrame').src = '/__preview__/index.html';
-        } else {
-            const html = buildPreviewHtml(files);
-            $('previewFrame').srcdoc = html;
-        }
+        // Всегда используем srcdoc, чтобы избежать проблем с Service Worker на GitHub Pages
+        const html = buildPreviewHtml(files);
+        $('previewFrame').srcdoc = html;
 
         consolePanel.clear();
         consolePanel.close();
@@ -2417,8 +2413,8 @@
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', async () => {
             try {
+                // Оставили только основной sw.js, sw-preview.js убран
                 await navigator.serviceWorker.register('sw.js');
-                await navigator.serviceWorker.register('sw-preview.js', { scope: '/' });
             } catch (error) {
                 console.warn('Ошибка регистрации Service Worker:', error.message);
             }
