@@ -17,6 +17,10 @@
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- CodeMirror 5 CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+    
     <style>
         :root {
             --bg-main: #13131a;
@@ -213,53 +217,38 @@
 
         #codeEditor {
             flex: 1;
-            overflow: hidden;
-            position: relative;
             height: 100%;
+            position: relative;
             z-index: 2;
         }
 
-        .cm-editor {
+        /* Переопределение стилей CodeMirror 5 */
+        .CodeMirror {
             height: 100%;
             font-family: var(--editor-font-family);
             font-size: var(--editor-font-size);
-            background-color: var(--bg-main) !important;
+            background-color: var(--bg-main);
         }
         
-        .cm-editor .cm-scroller {
-            font-family: inherit;
-            line-height: 1.6;
-            padding: 14px 12px 40px 12px;
-        }
-
-        .cm-editor .cm-content {
-            caret-color: var(--accent);
-        }
-
-        .cm-editor .cm-lineWrapping {
-            white-space: pre-wrap;
-            overflow-wrap: anywhere;
-        }
-
-        .cm-editor.cm-focused {
-            outline: none !important;
-        }
-
-        .cm-scroller::-webkit-scrollbar { width: 6px; height: 6px; }
-        .cm-scroller::-webkit-scrollbar-track { background: transparent; }
-        .cm-scroller::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-        .cm-scroller::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
-
-        .cm-editor .cm-gutters {
+        .CodeMirror-gutters {
             background-color: #101016 !important;
             border-right: 1px solid var(--border) !important;
+        }
+
+        .CodeMirror-linenumber {
             color: #52566b;
-            padding-left: 4px;
+        }
+
+        .CodeMirror-cursor {
+            border-left: 2px solid var(--accent) !important;
         }
         
-        .cm-editor .cm-activeLineGutter {
-            background-color: rgba(139, 92, 246, 0.1) !important;
-            color: var(--accent);
+        .CodeMirror-activeline-background {
+            background: rgba(255, 255, 255, 0.03) !important;
+        }
+        
+        .CodeMirror-selected {
+            background: rgba(139, 92, 246, 0.3) !important;
         }
 
         .edge-swipe-area { position: absolute; left: 0; top: 0; bottom: 0; width: 12px; z-index: 15; touch-action: pan-y; }
@@ -834,7 +823,7 @@
         </div>
 
         <div class="editor-content">
-            <div id="codeEditor"></div>
+            <textarea id="codeEditor" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"></textarea>
             <div class="edge-swipe-area" id="edgeSwipeArea"></div>
         </div>
 
@@ -1003,48 +992,17 @@
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 <input type="file" id="importFile" accept=".json,application/json" class="hidden-file-input">
 
-<!-- ЖЕСТКО ЗАФИКСИРОВАННЫЙ IMPORTMAP БЕЗ КОНФЛИКТОВ -->
-<script type="importmap">
-{
-  "imports": {
-    "@codemirror/state": "https://esm.sh/@codemirror/state@6.4.1",
-    "@codemirror/view": "https://esm.sh/@codemirror/view@6.26.3?external=@codemirror/state",
-    "@codemirror/commands": "https://esm.sh/@codemirror/commands@6.3.3?external=@codemirror/state,@codemirror/view",
-    "@codemirror/search": "https://esm.sh/@codemirror/search@6.5.6?external=@codemirror/state,@codemirror/view",
-    "@codemirror/autocomplete": "https://esm.sh/@codemirror/autocomplete@6.15.0?external=@codemirror/state,@codemirror/view,@codemirror/language",
-    "@codemirror/language": "https://esm.sh/@codemirror/language@6.10.1?external=@codemirror/state,@codemirror/view,@lezer/common,@lezer/highlight,@lezer/lr",
-    "@codemirror/lint": "https://esm.sh/@codemirror/lint@6.5.0?external=@codemirror/state,@codemirror/view",
-    "@codemirror/lang-html": "https://esm.sh/@codemirror/lang-html@6.4.9?external=@codemirror/state,@codemirror/view,@codemirror/language,@lezer/html,@lezer/common,@codemirror/autocomplete",
-    "@codemirror/lang-css": "https://esm.sh/@codemirror/lang-css@6.2.1?external=@codemirror/state,@codemirror/view,@codemirror/language,@lezer/css,@lezer/common",
-    "@codemirror/lang-javascript": "https://esm.sh/@codemirror/lang-javascript@6.2.2?external=@codemirror/state,@codemirror/view,@codemirror/language,@lezer/javascript,@lezer/common,@codemirror/autocomplete",
-    "@codemirror/lang-json": "https://esm.sh/@codemirror/lang-json@6.0.1?external=@codemirror/state,@codemirror/view,@codemirror/language,@lezer/json,@lezer/common",
-    "@lezer/highlight": "https://esm.sh/@lezer/highlight@1.2.0?external=@lezer/common",
-    "@lezer/common": "https://esm.sh/@lezer/common@1.2.1",
-    "@lezer/lr": "https://esm.sh/@lezer/lr@1.4.0?external=@lezer/common",
-    "@lezer/html": "https://esm.sh/@lezer/html@1.3.9?external=@lezer/common,@lezer/lr",
-    "@lezer/css": "https://esm.sh/@lezer/css@1.1.8?external=@lezer/common,@lezer/lr",
-    "@lezer/javascript": "https://esm.sh/@lezer/javascript@1.4.13?external=@lezer/common,@lezer/lr",
-    "@lezer/json": "https://esm.sh/@lezer/json@1.0.2?external=@lezer/common,@lezer/lr"
-  }
-}
-</script>
+<!-- CodeMirror 5 JavaScript -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
 
-<script type="module">
-    // ИМПОРТЫ СТРОГО В НАЧАЛЕ
-    import { EditorState, Compartment } from '@codemirror/state';
-    import { EditorView, keymap, lineNumbers, highlightActiveLineGutter, drawSelection, highlightSpecialChars, rectangularSelection, crosshairCursor, dropCursor, highlightActiveLine } from '@codemirror/view';
-    import { defaultKeymap, history as cmHistory, historyKeymap, indentWithTab } from '@codemirror/commands';
-    import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
-    import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
-    import { foldGutter, foldKeymap, indentOnInput, syntaxHighlighting, bracketMatching, HighlightStyle } from '@codemirror/language';
-    import { tags } from '@lezer/highlight';
-    import { lintKeymap } from '@codemirror/lint';
-    
-    import { html } from '@codemirror/lang-html';
-    import { css } from '@codemirror/lang-css';
-    import { javascript } from '@codemirror/lang-javascript';
-    import { json } from '@codemirror/lang-json';
-
+<script>
     'use strict';
 
     const APP_VERSION = '3.0.0';
@@ -1081,139 +1039,67 @@
         return wrapped;
     }
 
-    // --- CODE MIRROR 6 ИНТЕГРАЦИЯ ---
-
-    const languageConf = new Compartment();
-    const themeConf = new Compartment();
-    const wrapConf = new Compartment();
-    const tabSizeConf = new Compartment();
-
-    const darkTheme = EditorView.theme({
-        "&": { backgroundColor: "transparent", color: "#e5e7eb", height: "100%" },
-        ".cm-content": { caretColor: "#8b5cf6" },
-        ".cm-cursor, .cm-dropCursor": { borderLeftColor: "#8b5cf6" },
-        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": { backgroundColor: "rgba(139, 92, 246, 0.3) !important" },
-        ".cm-gutters": { backgroundColor: "transparent", color: "#52566b", border: "none" },
-        ".cm-activeLineGutter": { backgroundColor: "rgba(139, 92, 246, 0.1)", color: "#8b5cf6" },
-        ".cm-activeLine": { backgroundColor: "rgba(255, 255, 255, 0.03)" },
-        ".cm-lineNumbers .cm-gutterElement": { padding: "0 8px 0 0" },
-        ".cm-foldPlaceholder": { backgroundColor: "transparent", border: "none", color: "#8b5cf6" },
-        ".cm-tooltip": { backgroundColor: "#1f1f2c", border: "1px solid #2c2c3d", borderRadius: "8px", color: "#f3f4f6" },
-        ".cm-tooltip-autocomplete ul li[aria-selected]": { backgroundColor: "rgba(139, 92, 246, 0.3)", color: "#f3f4f6" },
-        ".cm-tooltip-autocomplete ul li:hover": { backgroundColor: "#282838" },
-        ".cm-panels": { backgroundColor: "#181822", color: "#f3f4f6" },
-        ".cm-searchMatch": { backgroundColor: "rgba(250, 204, 21, 0.3)", outline: "1px solid rgba(250, 204, 21, 0.5)" },
-        ".cm-searchMatch.cm-searchMatch-selected": { backgroundColor: "rgba(139, 92, 246, 0.5)" }
-    }, { dark: true });
-
-    const customHighlightStyle = HighlightStyle.define([
-        { tag: tags.keyword, color: '#c678dd' },
-        { tag: [tags.name, tags.deleted, tags.character, tags.propertyName, tags.macroName], color: '#e06c75' },
-        { tag: [tags.function(tags.variableName), tags.labelName], color: '#61afef' },
-        { tag: [tags.color, tags.constant(tags.name), tags.standard(tags.name)], color: '#d19a66' },
-        { tag: [tags.definition(tags.name), tags.separator], color: '#e5c07b' },
-        { tag: [tags.typeName, tags.className, tags.number, tags.changed, tags.annotation, tags.modifier, tags.self, tags.namespace], color: '#e5c07b' },
-        { tag: [tags.operator, tags.operatorKeyword, tags.url, tags.escape, tags.regexp, tags.link], color: '#56b6c2' },
-        { tag: [tags.meta, tags.comment], color: '#5c6370', fontStyle: 'italic' },
-        { tag: tags.strong, fontWeight: 'bold' },
-        { tag: tags.emphasis, fontStyle: 'italic' },
-        { tag: tags.strikethrough, textDecoration: 'line-through' },
-        { tag: tags.link, color: '#61afef', textDecoration: 'underline' },
-        { tag: tags.heading, fontWeight: 'bold', color: '#e06c75' },
-        { tag: [tags.atom, tags.bool, tags.special(tags.variableName)], color: '#d19a66' },
-        { tag: [tags.processingInstruction, tags.string, tags.inserted], color: '#98c379' },
-        { tag: tags.invalid, color: '#ffffff' },
-    ]);
-
+    // --- CODE MIRROR 5 ИНТЕГРАЦИЯ ---
     let cmView = null;
 
     function createEditor() {
         try {
-            const startState = EditorState.create({
-                doc: '',
-                extensions: [
-                    lineNumbers(),
-                    highlightActiveLineGutter(),
-                    highlightSpecialChars(),
-                    cmHistory(),
-                    foldGutter(),
-                    drawSelection(),
-                    dropCursor(),
-                    EditorState.allowMultipleSelections.of(true),
-                    indentOnInput(),
-                    syntaxHighlighting(customHighlightStyle),
-                    bracketMatching(),
-                    closeBrackets(),
-                    autocompletion(),
-                    rectangularSelection(),
-                    crosshairCursor(),
-                    highlightActiveLine(),
-                    highlightSelectionMatches(),
-                    keymap.of([
-                        ...closeBracketsKeymap,
-                        ...defaultKeymap,
-                        ...searchKeymap,
-                        ...historyKeymap,
-                        ...foldKeymap,
-                        ...completionKeymap,
-                        ...lintKeymap,
-                        indentWithTab
-                    ]),
-                    languageConf.of([]),
-                    themeConf.of(darkTheme),
-                    wrapConf.of([]),
-                    tabSizeConf.of(EditorState.tabSize.of(2)),
-                    EditorView.updateListener.of((update) => {
-                        if (update.docChanged) {
-                            const file = findItemById(fileSystem, activeFileId);
-                            if (file) file.content = update.state.doc.toString();
-                            scheduleSave();
-                            $('linesCountText').textContent = `Строк: ${update.state.doc.lines}`;
-                            refreshSearchResults();
-                        }
-                    })
-                ]
+            cmView = CodeMirror.fromTextArea($('codeEditor'), {
+                lineNumbers: true,
+                mode: "htmlmixed",
+                theme: "dracula",
+                tabSize: 2,
+                indentUnit: 2,
+                lineWrapping: true,
+                autoCloseBrackets: true,
+                matchBrackets: true,
+                styleActiveLine: true
             });
 
-            cmView = new EditorView({
-                state: startState,
-                parent: $('codeEditor')
+            // Синхронизация изменений с моделью
+            cmView.on("change", () => {
+                const file = findItemById(fileSystem, activeFileId);
+                if (file) file.content = cmView.getValue();
+                scheduleSave();
+                $('linesCountText').textContent = `Строк: ${cmView.lineCount()}`;
+                refreshSearchResults();
             });
+            
+            // Принудительный рендер (чтобы не было пустого экрана при загрузке)
+            setTimeout(() => { cmView.refresh(); }, 100);
         } catch (error) {
             console.error("CodeMirror failed to load:", error);
-            $('codeEditor').innerHTML = `<div style="padding:14px;color:var(--danger);font-size:14px;"><i class="fa-solid fa-triangle-exclamation"></i> Ошибка загрузки редактора: ${error.message}</div>`;
-            toast('Ошибка инициализации редактора.', { type: 'error' });
+            $('codeEditor').style.display = 'block';
+            $('codeEditor').value = "Ошибка загрузки редактора: " + error.message;
         }
     }
 
     function getLanguageExtension(fileName) {
         const ext = (fileName || '').split('.').pop().toLowerCase();
         switch (ext) {
-            case 'html': return html();
-            case 'css': return css();
-            case 'js': return javascript();
-            case 'json': return json();
-            default: return [];
+            case 'html': return 'htmlmixed';
+            case 'css': return 'css';
+            case 'js': return 'javascript';
+            case 'json': return { name: "javascript", json: true };
+            default: return 'null';
         }
     }
 
     function setEditorLanguage(fileName) {
         if (!cmView) return;
-        cmView.dispatch({
-            effects: languageConf.reconfigure(getLanguageExtension(fileName))
-        });
+        cmView.setOption("mode", getLanguageExtension(fileName));
     }
 
     function setEditorContent(content) {
         if (!cmView) return;
-        cmView.dispatch({
-            changes: { from: 0, to: cmView.state.doc.length, insert: content || '' }
-        });
+        cmView.setValue(content || '');
     }
 
     function getEditorContent() {
-        return cmView ? cmView.state.doc.toString() : '';
+        return cmView ? cmView.getValue() : '';
     }
+
+    // --- ОСТАЛЬНОЙ КОД ПРИЛОЖЕНИЯ ---
 
     const DEFAULT_PROJECT = [
         { id: 'demo-index', name: 'index.html', type: 'file', content: '<!DOCTYPE html>\n<html lang="ru">\n<head>\n  <meta charset="UTF-8">\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <div class="card">\n    <h1>CodeDock IDE</h1>\n    <p>Нажми кнопку ниже для проверки JS</p>\n    <button onclick="sayHi()">Нажми меня</button>\n  </div>\n  <script src="script.js"><\/script>\n</body>\n</html>' },
@@ -1435,10 +1321,12 @@
         });
     }
 
+    // --- UI ЭЛЕМЕНТЫ ---
     const tabsBar = $('tabsBar');
     const fileTreeEl = $('fileTree');
     const statsTextEl = $('statsText');
 
+    // --- УПРАВЛЕНИЕ ВКЛАДКАМИ И РЕДАКТОРОМ ---
     function syncEditorFromModel() {
         const file = findItemById(fileSystem, activeFileId);
         if (!file) {
@@ -1519,8 +1407,10 @@
         renderTabs();
         syncEditorFromModel();
         renderTree();
+        if (cmView) setTimeout(() => cmView.refresh(), 10);
     }
 
+    // --- ПОИСК И ЗАМЕНА ---
     const searchPanel = $('searchPanel');
     const searchInput = $('searchInput');
     const replaceInput = $('replaceInput');
@@ -1532,7 +1422,7 @@
         if (!cmView) { toast('Сначала откройте файл.', { type: 'warn' }); return; }
         searchPanel.classList.add('open');
         pushGuard();
-        const selected = cmView.state.sliceDoc(cmView.state.selection.main.from, cmView.state.selection.main.to);
+        const selected = cmView.getSelection();
         if (selected && !selected.includes('\n')) searchInput.value = selected;
         searchInput.focus();
         searchInput.select();
@@ -1565,7 +1455,7 @@
         searchMatches = computeMatches();
         if (!searchMatches.length) { searchIndex = -1; searchCount.textContent = '0/0'; return; }
         if (searchIndex < 0 || searchIndex >= searchMatches.length) {
-            const caret = cmView ? cmView.state.selection.main.head : 0;
+            const caret = cmView ? cmView.indexFromPos(cmView.getCursor()) : 0;
             const next = searchMatches.findIndex((match) => match.start >= caret);
             searchIndex = next === -1 ? 0 : next;
         }
@@ -1577,10 +1467,10 @@
         searchIndex = (index + searchMatches.length) % searchMatches.length;
         const match = searchMatches[searchIndex];
         cmView.focus();
-        cmView.dispatch({
-            selection: { anchor: match.start, head: match.end },
-            scrollIntoView: true
-        });
+        const startPos = cmView.posFromIndex(match.start);
+        const endPos = cmView.posFromIndex(match.end);
+        cmView.setSelection(startPos, endPos);
+        cmView.scrollIntoView({ from: startPos, to: endPos }, 100);
         searchCount.textContent = `${searchIndex + 1}/${searchMatches.length}`;
     }
 
@@ -1588,9 +1478,7 @@
         if (!searchMatches.length || searchIndex < 0 || !cmView) return;
         const match = searchMatches[searchIndex];
         const replacement = replaceInput.value;
-        cmView.dispatch({
-            changes: { from: match.start, to: match.end, insert: replacement }
-        });
+        cmView.replaceRange(replacement, cmView.posFromIndex(match.start), cmView.posFromIndex(match.end), "replace");
         saveNow();
         searchMatches = computeMatches();
         if (searchIndex >= searchMatches.length) searchIndex = searchMatches.length - 1;
@@ -1622,18 +1510,16 @@
         if (event.key === 'Escape') closeSearch();
     });
 
+    // --- НАСТРОЙКИ ---
     const uiSettings = { fontSize: 13, tabSize: 2, wrap: false };
 
     function applyUiSettings() {
         const root = document.documentElement;
         root.style.setProperty('--editor-font-size', `${uiSettings.fontSize}px`);
         if (cmView) {
-            cmView.dispatch({
-                effects: [
-                    wrapConf.reconfigure(uiSettings.wrap ? EditorView.lineWrapping : []),
-                    tabSizeConf.reconfigure(EditorState.tabSize.of(uiSettings.tabSize))
-                ]
-            });
+            cmView.setOption("tabSize", uiSettings.tabSize);
+            cmView.setOption("lineWrapping", uiSettings.wrap);
+            cmView.refresh();
         }
     }
 
@@ -1668,6 +1554,7 @@
     $('closeSettingsBtn').addEventListener('click', () => settingsModal.classList.remove('open'));
     settingsModal.addEventListener('click', (event) => { if (event.target === settingsModal) settingsModal.classList.remove('open'); });
 
+    // --- КОНСОЛЬ И ПРЕДПРОСМОТР ---
     const CONSOLE_SHIM = `(function () {
         var send = function (type, args, stack) {
             try {
@@ -1804,6 +1691,7 @@
     $('previewReloadBtn').addEventListener('click', runProject);
     $('closePreviewBtn').addEventListener('click', () => $('previewOverlay').classList.remove('open'));
 
+    // --- ЭКСПОРТ / ИМПОРТ ---
     const CRC_TABLE = (() => {
         const table = new Uint32Array(256);
         for (let i = 0; i < 256; i += 1) {
@@ -1980,6 +1868,7 @@
         });
     });
 
+    // --- ФАЙЛОВОЕ ДЕРЕВО ---
     function getFileIcon(filename) {
         const ext = filename.split('.').pop().toLowerCase();
         switch (ext) {
@@ -2094,6 +1983,7 @@
         return result;
     }
 
+    // --- МОДАЛКИ ---
     const createModal = $('createModal');
     const newItemNameInput = $('newItemName');
     const parentFolderSelect = $('parentFolderSelect');
@@ -2255,6 +2145,7 @@
 
     $('fileSearch').addEventListener('input', () => renderTree());
 
+    // --- ЖЕСТЫ И КОНТЕКСТНОЕ МЕНЮ ---
     const fileDrawer = $('fileDrawer');
     const drawerBackdrop = $('drawerBackdrop');
     const customContextMenu = $('customContextMenu');
@@ -2277,7 +2168,7 @@
 
         if (target.closest('button') || target.closest('input') || target.closest('a')) return;
 
-        if (!isOpen && (target.closest('.cm-gutters') || target.closest('.edge-swipe-area'))) {
+        if (!isOpen && (target.closest('.CodeMirror-gutters') || target.closest('.edge-swipe-area'))) {
             gesture = { mode: 'open', startX: touch.clientX, startY: touch.clientY, width: fileDrawer.offsetWidth, locked: false };
         } else if (isOpen && target.closest('.file-drawer')) {
             gesture = { mode: 'close', startX: touch.clientX, startY: touch.clientY, width: fileDrawer.offsetWidth, locked: false };
@@ -2347,7 +2238,7 @@
     function hideContextMenu() { customContextMenu.classList.remove('open'); }
 
     if (cmView) {
-        cmView.dom.addEventListener('contextmenu', (event) => {
+        cmView.getWrapperElement().addEventListener('contextmenu', (event) => {
             event.preventDefault();
             showContextMenu(event.clientX, event.clientY);
         });
@@ -2358,7 +2249,7 @@
         let lastTapX = 0;
         let lastTapY = 0;
 
-        cmView.dom.addEventListener('touchstart', (event) => {
+        cmView.getWrapperElement().addEventListener('touchstart', (event) => {
             if (event.touches.length !== 1) return;
             const touch = event.touches[0];
             const now = Date.now();
@@ -2376,8 +2267,8 @@
             longPressTimer = setTimeout(() => { if (!touchMoved) showContextMenu(touch.clientX, touch.clientY); }, 650);
         }, { passive: true });
 
-        cmView.dom.addEventListener('touchmove', () => { touchMoved = true; clearTimeout(longPressTimer); }, { passive: true });
-        cmView.dom.addEventListener('touchend', () => clearTimeout(longPressTimer));
+        cmView.getWrapperElement().addEventListener('touchmove', () => { touchMoved = true; clearTimeout(longPressTimer); }, { passive: true });
+        cmView.getWrapperElement().addEventListener('touchend', () => clearTimeout(longPressTimer));
     }
 
     window.addEventListener('pointerdown', (event) => { if (!customContextMenu.contains(event.target)) hideContextMenu(); });
@@ -2385,7 +2276,7 @@
     $('ctxSelectAll').addEventListener('pointerdown', (event) => {
         event.preventDefault();
         if (!cmView) return;
-        cmView.dispatch({ selection: { anchor: 0, head: cmView.state.doc.length } });
+        cmView.execCommand("selectAll");
         cmView.focus();
         hideContextMenu();
     });
@@ -2393,11 +2284,10 @@
     $('ctxCut').addEventListener('pointerdown', (event) => {
         event.preventDefault();
         if (!cmView) return;
-        const { from, to } = cmView.state.selection.main;
-        const text = cmView.state.sliceDoc(from, to);
+        const text = cmView.getSelection();
         if (text) {
             navigator.clipboard.writeText(text).catch(() => {});
-            cmView.dispatch({ changes: { from, to, insert: '' } });
+            cmView.replaceSelection("");
         }
         hideContextMenu();
     });
@@ -2405,8 +2295,7 @@
     $('ctxCopy').addEventListener('pointerdown', (event) => {
         event.preventDefault();
         if (!cmView) return;
-        const { from, to } = cmView.state.selection.main;
-        const text = cmView.state.sliceDoc(from, to) || cmView.state.doc.toString();
+        const text = cmView.getSelection() || cmView.getValue();
         navigator.clipboard.writeText(text).catch(() => {});
         hideContextMenu();
     });
@@ -2418,7 +2307,7 @@
             if (!navigator.clipboard || !navigator.clipboard.readText) throw new Error('Буфер обмена недоступен');
             const text = await navigator.clipboard.readText();
             if (cmView) {
-                cmView.dispatch(cmView.state.replaceSelection(text));
+                cmView.replaceSelection(text);
             }
         } catch (error) {
             toast('Вставка недоступна.', { type: 'warn' });
@@ -2428,19 +2317,19 @@
     $('ctxClear').addEventListener('pointerdown', (event) => {
         event.preventDefault();
         if (cmView) {
-            cmView.dispatch({ changes: { from: 0, to: cmView.state.doc.length, insert: '' } });
+            cmView.setValue("");
         }
         hideContextMenu();
     });
 
-    $('undoBtn').addEventListener('click', () => { if (cmView) cmView.focus(); });
-    $('redoBtn').addEventListener('click', () => { if (cmView) cmView.focus(); });
+    $('undoBtn').addEventListener('click', () => { if (cmView) { cmView.undo(); cmView.focus(); } });
+    $('redoBtn').addEventListener('click', () => { if (cmView) { cmView.redo(); cmView.focus(); } });
 
     $('symbolBar').addEventListener('click', (event) => {
         const button = event.target.closest('.sym-btn');
         if (!button || !cmView) return;
         const sym = button.dataset.sym;
-        cmView.dispatch(cmView.state.replaceSelection(sym));
+        cmView.replaceSelection(sym);
         cmView.focus();
     });
 
