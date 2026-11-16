@@ -16,6 +16,10 @@
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-180.png">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Highlight.js Тема -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    
     <style>
         :root {
             --bg-main: #13131a;
@@ -34,6 +38,7 @@
             --warn: #facc15;
             --editor-font-size: 13px;
             --editor-line-height: 21px;
+            --editor-font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         }
 
         * {
@@ -91,7 +96,6 @@
         }
 
         .logo-btn:active { transform: scale(0.95); opacity: 0.8; }
-
         .brand-logo { height: 44px; width: auto; object-fit: contain; }
 
         .save-status {
@@ -104,7 +108,6 @@
         }
 
         .save-status i { font-size: 0.65rem; }
-
         .save-status.saving { color: var(--warn); }
         .save-status.saved { color: var(--success); }
         .save-status.error { color: var(--danger); }
@@ -185,7 +188,7 @@
             flex-shrink: 0;
         }
 
-        .action-group { display: flex; gap: 8px; }
+        .action-group { display: flex; gap: 8px; width: 100%; justify-content: space-between; }
 
         .btn-action {
             display: flex;
@@ -193,25 +196,23 @@
             justify-content: center;
             gap: 6px;
             height: 34px;
-            padding: 0 14px;
+            padding: 0;
+            width: 34px;
             border-radius: 8px;
             font-size: 0.88rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.15s;
             border: 1px solid transparent;
+            flex-shrink: 0;
         }
 
         .btn-action:active { transform: scale(0.96); }
-
-        .btn-icon { padding: 0; width: 34px; background-color: var(--bg-card); color: var(--text-main); border-color: var(--border); }
+        .btn-icon { background-color: var(--bg-card); color: var(--text-main); border-color: var(--border); }
         .btn-icon:active { border-color: var(--accent); color: var(--accent); }
-
-        .btn-save { background-color: var(--bg-card); color: var(--text-main); border-color: var(--border); }
-        .btn-save:active { border-color: var(--success); }
-
         .btn-run { background-color: var(--accent); color: #fff; box-shadow: 0 2px 8px var(--accent-glow); }
 
+        /* --- ОБЕРТКА РЕДАКТОРА С ПОДСВЕТКОЙ --- */
         .editor-content { flex: 1; display: flex; position: relative; overflow: hidden; }
 
         .line-numbers {
@@ -220,7 +221,7 @@
             padding: 14px 0 40px 0;
             background-color: #101016;
             color: #52566b;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-family: var(--editor-font-family);
             font-size: var(--editor-font-size);
             line-height: var(--editor-line-height);
             text-align: right;
@@ -228,33 +229,80 @@
             overflow: hidden;
             border-right: 1px solid var(--border);
             touch-action: pan-y;
+            z-index: 3;
         }
 
         .line-num-row { height: var(--editor-line-height); padding-right: 8px; display: block; }
-
         .line-num-row.active-line { color: var(--accent); font-weight: 700; background-color: rgba(139, 92, 246, 0.1); }
 
-        .code-textarea {
+        .code-wrapper {
             flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Слой с подсветкой (фон) */
+        .highlight-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 14px 12px 40px 12px;
+            font-family: var(--editor-font-family);
+            font-size: var(--editor-font-size);
+            line-height: var(--editor-line-height);
+            tab-size: var(--editor-tab-size, 2);
+            white-space: pre;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 1;
+            color: #e5e7eb;
+            background: transparent;
+        }
+
+        .highlight-layer code {
+            font-family: inherit;
+            font-size: inherit;
+            line-height: inherit;
+            background: transparent;
+            padding: 0;
+        }
+
+        /* Прозрачная текстовая область (слой ввода) */
+        .code-textarea {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             background: transparent;
-            color: #e5e7eb;
+            color: transparent;
+            caret-color: var(--accent);
             border: none;
             outline: none;
             resize: none;
             padding: 14px 12px 40px 12px;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-family: var(--editor-font-family);
             font-size: var(--editor-font-size);
             line-height: var(--editor-line-height);
             tab-size: var(--editor-tab-size, 2);
             white-space: pre;
             overflow-x: auto;
             overflow-y: scroll;
-            caret-color: var(--accent);
+            z-index: 2;
+        }
+
+        .code-textarea::selection {
+            background-color: rgba(139, 92, 246, 0.4);
+            color: transparent;
         }
 
         .code-textarea.wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+        .code-textarea.wrap + .highlight-layer { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+        /* --------------------------------------- */
 
         .edge-swipe-area { position: absolute; left: 0; top: 0; bottom: 0; width: 12px; z-index: 15; touch-action: pan-y; }
 
@@ -481,7 +529,7 @@
             flex: 1;
             overflow-y: auto;
             padding: 8px 14px;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-family: var(--editor-font-family);
             font-size: 12px;
             line-height: 1.4;
         }
@@ -653,7 +701,6 @@
         .modal-check { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
         .modal-check input { width: 18px; height: 18px; }
 
-        /* --- Поиск и замена --- */
         .search-panel {
             position: absolute;
             top: 0;
@@ -706,7 +753,6 @@
         .search-btn:active { border-color: var(--accent); color: var(--accent); }
         .search-btn.wide { width: auto; padding: 0 10px; font-size: 0.8rem; font-weight: 600; }
 
-        /* --- Тосты --- */
         .toast-container {
             position: fixed;
             left: 50%;
@@ -738,7 +784,6 @@
         .toast.error { border-left-color: var(--danger); }
         .toast.success { border-left-color: var(--success); }
         .toast.warn { border-left-color: var(--warn); }
-
         .toast span { flex: 1; }
 
         .toast button {
@@ -760,16 +805,13 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .sr-only {
-            position: absolute;
+        .hidden-file-input {
+            position: fixed;
+            left: -9999px;
+            top: 0;
+            opacity: 0;
             width: 1px;
             height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
         }
     </style>
 </head>
@@ -805,17 +847,15 @@
                 <button class="btn-action btn-icon" id="settingsBtn" title="Настройки" aria-label="Настройки">
                     <i class="fa-solid fa-gear"></i>
                 </button>
-            </div>
-            <div class="action-group">
                 <button class="btn-action btn-icon" id="consoleBtn" title="Консоль" aria-label="Консоль">
                     <i class="fa-solid fa-terminal"></i>
                     <span class="console-dot" id="consoleDot"></span>
                 </button>
-                <button class="btn-action btn-save" id="saveProjectBtn">
-                    <i class="fa-solid fa-floppy-disk"></i> Сохранить
+                <button class="btn-action btn-icon" id="saveProjectBtn" title="Сохранить" aria-label="Сохранить">
+                    <i class="fa-solid fa-floppy-disk"></i>
                 </button>
-                <button class="btn-action btn-run" id="runProjectBtn">
-                    <i class="fa-solid fa-play"></i> Запуск
+                <button class="btn-action btn-icon btn-run" id="runProjectBtn" title="Запуск" aria-label="Запуск">
+                    <i class="fa-solid fa-play"></i>
                 </button>
             </div>
         </div>
@@ -837,7 +877,12 @@
 
         <div class="editor-content">
             <div class="line-numbers" id="lineNumbers" aria-hidden="true"></div>
-            <textarea class="code-textarea" id="codeEditor" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" inputmode="text" aria-label="Редактор кода" placeholder="// Создайте новый файл в меню слева"></textarea>
+            <div class="code-wrapper">
+                <!-- Слой подсветки -->
+                <pre class="highlight-layer" aria-hidden="true"><code id="highlighting" class="hljs"></code></pre>
+                <!-- Слой ввода -->
+                <textarea class="code-textarea" id="codeEditor" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" inputmode="text" aria-label="Редактор кода" placeholder="// Создайте новый файл в меню слева"></textarea>
+            </div>
             <div class="edge-swipe-area" id="edgeSwipeArea"></div>
         </div>
 
@@ -1004,7 +1049,10 @@
 </div>
 
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
-<input type="file" id="importFile" accept=".json,application/json" class="sr-only">
+<input type="file" id="importFile" accept=".json,application/json" class="hidden-file-input">
+
+<!-- Highlight.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
 <script>
     'use strict';
@@ -1063,14 +1111,6 @@
         return wrapped;
     }
 
-    function plural(n, forms) {
-        const m10 = n % 10;
-        const m100 = n % 100;
-        if (m10 === 1 && m100 !== 11) return forms[0];
-        if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return forms[1];
-        return forms[2];
-    }
-
     /* ============================================================
        2. Модель проекта: загрузка, проверка, сохранение
        ============================================================ */
@@ -1115,8 +1155,12 @@
             const result = [];
             for (const item of items) {
                 if (!item || typeof item !== 'object') return null;
-                const name = typeof item.name === 'string' ? item.name.trim() : '';
-                if (!name || name.includes('/')) return null;
+                
+                let name = typeof item.name === 'string' ? item.name.trim() : '';
+                if (!name) return null;
+                
+                name = name.replace(/[/\\]/g, '-');
+
                 const type = item.type === 'folder' ? 'folder' : 'file';
                 const node = {
                     id: typeof item.id === 'string' && item.id ? item.id : genId(),
@@ -1289,20 +1333,6 @@
         return list;
     }
 
-    function getItemPath(id) {
-        const parts = [];
-        const walk = (items, prefix) => {
-            for (const item of items) {
-                const path = [...prefix, item.name];
-                if (item.id === id) { parts.push(...path); return true; }
-                if (item.children && walk(item.children, path)) return true;
-            }
-            return false;
-        };
-        walk(fileSystem, []);
-        return parts.join('/');
-    }
-
     function siblingsOf(parentId) {
         if (!parentId) return fileSystem;
         const parent = findItemById(fileSystem, parentId);
@@ -1399,9 +1429,10 @@
     }
 
     /* ============================================================
-       5. Редактор: вкладки, содержимое, номера строк
+       5. Редактор: вкладки, содержимое, номера строк, подсветка
        ============================================================ */
     const codeEditor = $('codeEditor');
+    const highlighting = $('highlighting');
     const lineNumbers = $('lineNumbers');
     const tabsBar = $('tabsBar');
     const fileTreeEl = $('fileTree');
@@ -1412,7 +1443,7 @@
     let activeLineNumber = 0;
     let lineNodes = [];
 
-    const historyStacks = new Map(); // fileId -> { undo: [], redo: [] }
+    const historyStacks = new Map();
     let applyingHistory = false;
 
     function historyFor(fileId) {
@@ -1452,6 +1483,7 @@
         if (file) file.content = next;
         saveNow();
         updateLineNumbers(true);
+        updateHighlight();
         const caret = Math.min(codeEditor.value.length, codeEditor.selectionStart || 0);
         codeEditor.setSelectionRange(caret, caret);
     }
@@ -1465,11 +1497,14 @@
             renderedLineCount = 0;
             lineNumbers.innerHTML = '';
             linesCountText.textContent = 'Строк: 0';
+            highlighting.textContent = '';
+            highlighting.className = 'hljs';
             return;
         }
         codeEditor.placeholder = '';
         codeEditor.value = file.content || '';
         updateLineNumbers(true);
+        updateHighlight();
     }
 
     function updateActiveLineNumber() {
@@ -1506,6 +1541,37 @@
         updateActiveLineNumber();
         lineNumbers.scrollTop = codeEditor.scrollTop;
     }
+
+    // --- ПОДСВЕТКА СИНТАКСИСА ---
+    function updateHighlight() {
+        const file = findItemById(fileSystem, activeFileId);
+        if (!file) return;
+
+        const ext = file.name.split('.').pop().toLowerCase();
+        let lang = 'plaintext';
+        if (ext === 'html') lang = 'xml'; // highlight.js использует xml для html
+        else if (ext === 'css') lang = 'css';
+        else if (ext === 'js') lang = 'javascript';
+        else if (ext === 'json') lang = 'json';
+
+        let code = codeEditor.value;
+        // Добавляем перенос строки, чтобы последняя пустая строка не "схлопывалась"
+        if (code.endsWith('\n')) code += ' ';
+
+        try {
+            const result = hljs.highlight(code, { language: lang });
+            highlighting.innerHTML = result.value;
+            highlighting.className = `hljs language-${lang}`;
+        } catch (e) {
+            highlighting.textContent = code;
+            highlighting.className = 'hljs';
+        }
+
+        // Синхронизация скролла
+        highlighting.scrollTop = codeEditor.scrollTop;
+        highlighting.scrollLeft = codeEditor.scrollLeft;
+    }
+    // ----------------------------
 
     function renderTabs() {
         const files = getAllFiles(fileSystem);
@@ -1749,6 +1815,7 @@
         scheduleHistorySnapshot();
         scheduleSave();
         updateLineNumbers();
+        updateHighlight();
         refreshSearchResults();
     });
 
@@ -1756,6 +1823,8 @@
     codeEditor.addEventListener('keyup', () => updateActiveLineNumber());
     codeEditor.addEventListener('scroll', () => {
         lineNumbers.scrollTop = codeEditor.scrollTop;
+        highlighting.scrollTop = codeEditor.scrollTop;
+        highlighting.scrollLeft = codeEditor.scrollLeft;
     });
 
     $('undoBtn').addEventListener('click', () => applyHistory('undo'));
@@ -1849,6 +1918,7 @@
         const caret = match.start + replacement.length;
         codeEditor.setSelectionRange(caret, caret);
         updateLineNumbers(true);
+        updateHighlight();
         searchMatches = computeMatches();
         if (searchIndex >= searchMatches.length) searchIndex = searchMatches.length - 1;
         searchCount.textContent = searchMatches.length ? `${searchIndex + 1}/${searchMatches.length}` : '0/0';
@@ -1866,6 +1936,7 @@
         pushHistorySnapshot();
         saveNow();
         updateLineNumbers(true);
+        updateHighlight();
         refreshSearchResults();
         toast(`Заменено вхождений: ${count}`, { type: 'success' });
     }
@@ -1902,6 +1973,7 @@
         codeEditor.classList.toggle('wrap', uiSettings.wrap);
         renderedLineCount = 0;
         updateLineNumbers(true);
+        updateHighlight();
     }
 
     function loadUiSettings() {
@@ -1982,7 +2054,6 @@
         });
     })();`;
 
-    /** Собирает документ для предпросмотра: подключённые css/js вставляются на свои места. */
     function buildPreviewHtml(files) {
         const list = Array.isArray(files) ? files : [];
         const htmlFile = list.find((file) => file.name.toLowerCase() === 'index.html')
@@ -2120,27 +2191,25 @@
             return;
         }
 
-        const worker = await navigator.serviceWorker.ready;
-        if (!worker || !worker.active) {
-            toast('Локальный сервер не запущен. Перезагрузите приложение.', { type: 'error' });
-            return;
+        // Используем Service Worker для локального сервера, если доступен
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+                type: 'SET_PREVIEW_FILES',
+                files: files.map((f) => ({
+                    name: f.name,
+                    path: f.path,
+                    content: f.content,
+                })),
+            });
+            $('previewFrame').src = '/__preview__/index.html';
+        } else {
+            // Фолбэк: srcdoc (без поддержки import)
+            const html = buildPreviewHtml(files);
+            $('previewFrame').srcdoc = html;
         }
-
-        // Отправляем файлы в Service Worker
-        worker.active.postMessage({
-            type: 'SET_PREVIEW_FILES',
-            files: files.map((f) => ({
-                name: f.name,
-                path: f.path,
-                content: f.content,
-            })),
-        });
 
         consolePanel.clear();
         consolePanel.close();
-        
-        // Грузим iframe по виртуальному URL
-        $('previewFrame').src = '/__preview__/index.html';
         $('previewOverlay').classList.add('open');
         pushGuard();
     }
@@ -2148,6 +2217,7 @@
     $('runProjectBtn').addEventListener('click', runProject);
     $('previewReloadBtn').addEventListener('click', runProject);
     $('closePreviewBtn').addEventListener('click', () => $('previewOverlay').classList.remove('open'));
+
     /* ============================================================
        10. Экспорт и импорт проекта
        ============================================================ */
@@ -2175,7 +2245,6 @@
         return { time, day };
     }
 
-    /** ZIP без сжатия (store): достаточно для выгрузки проекта. */
     function zipStore(files, date = new Date()) {
         const encoder = new TextEncoder();
         const chunks = [];
@@ -2276,11 +2345,29 @@
 
     function importJson(text) {
         const parsed = safeParse(text);
-        const tree = normalizeTree(parsed);
-        if (!tree || !tree.length) {
+        if (!parsed) {
+            toast('Файл поврежден или имеет неверный формат JSON.', { type: 'error', duration: 6000 });
+            return false;
+        }
+        
+        let tree = null;
+        if (Array.isArray(parsed)) {
+            tree = normalizeTree(parsed);
+        } else if (parsed && Array.isArray(parsed.tree)) {
+            tree = normalizeTree(parsed.tree);
+        } else if (parsed && parsed.app === 'CodeDock Studio' && !parsed.tree) {
+            toast('В файле нет данных проекта.', { type: 'error', duration: 6000 });
+            return false;
+        } else {
             toast('Файл не похож на проект CodeDock.', { type: 'error', duration: 6000 });
             return false;
         }
+
+        if (!tree || !tree.length) {
+            toast('Проект пуст или структура файлов повреждена.', { type: 'error', duration: 6000 });
+            return false;
+        }
+
         const previous = clone(fileSystem);
         fileSystem = tree;
         activeFileId = getAllFiles(fileSystem)[0]?.id || null;
@@ -2307,16 +2394,27 @@
 
     $('exportZipBtn').addEventListener('click', exportZip);
     $('exportJsonBtn').addEventListener('click', exportJson);
-    $('importBtn').addEventListener('click', () => $('importFile').click());
-    $('importFile').addEventListener('change', async (event) => {
+    
+    $('importBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        $('importFile').click();
+    });
+
+    $('importFile').addEventListener('change', (event) => {
         const file = event.target.files && event.target.files[0];
         event.target.value = '';
         if (!file) return;
-        try {
-            importJson(await file.text());
-        } catch (error) {
-            toast(`Не удалось прочитать файл: ${error.message}`, { type: 'error' });
-        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                importJson(e.target.result);
+            } catch (error) {
+                toast(`Не удалось прочитать файл: ${error.message}`, { type: 'error' });
+            }
+        };
+        reader.onerror = () => toast('Ошибка чтения файла.', { type: 'error' });
+        reader.readAsText(file);
     });
 
     $('resetProjectBtn').addEventListener('click', async () => {
@@ -2625,7 +2723,6 @@
         const result = removeItemById(id);
         if (!result) return;
 
-        // После удаления папки могли исчезнуть открытые вкладки — пересобираем список.
         const remaining = getAllFiles(fileSystem);
         openFileIds = openFileIds.filter((fileId) => remaining.some((file) => file.id === fileId));
         if (!remaining.some((file) => file.id === activeFileId)) {
@@ -2670,9 +2767,6 @@
     $('fileSearch').addEventListener('input', () => renderTree());
 
     /* ============================================================
-       13. Отрисовка дерева и вкладок — общий вход
-       ============================================================ */
-    /* ============================================================
        14. Жесты, контекстное меню, буфер обмена
        ============================================================ */
     const fileDrawer = $('fileDrawer');
@@ -2700,8 +2794,12 @@
     workspaceEl.addEventListener('touchstart', (event) => {
         if (event.touches.length !== 1) return;
         const touch = event.touches[0];
-        const isOpen = fileDrawer.classList.contains('open');
         const target = event.target;
+        const isOpen = fileDrawer.classList.contains('open');
+
+        if (target.closest('button') || target.closest('input') || target.closest('a')) {
+            return;
+        }
 
         if (!isOpen && (target.closest('.line-numbers') || target.closest('.edge-swipe-area'))) {
             gesture = { mode: 'open', startX: touch.clientX, startY: touch.clientY, width: fileDrawer.offsetWidth, locked: false };
@@ -2927,8 +3025,6 @@
 
     window.addEventListener('popstate', () => {
         guardPushed = false;
-        // Закрываем верхнюю панель и держим ровно одну запись истории на это открытие.
-        // Если закрывать нечего — не мешаем уйти назад из приложения.
         if (closeTopPanel()) pushGuard();
     });
 
@@ -2961,7 +3057,7 @@
         }
     });
 
-      // Регистрируем основной SW и SW для предпросмотра
+    // Регистрируем основной SW и SW для предпросмотра
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', async () => {
             try {
