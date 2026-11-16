@@ -25,6 +25,7 @@
             --text-muted: #8e92a4;
             --border: #2c2c3d;
             --danger: #ef4444;
+            --success: #4ade80;
         }
 
         * {
@@ -151,33 +152,66 @@
             background-color: rgba(139, 92, 246, 0.14);
         }
 
-        .btn-run {
-            background-color: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 0 14px;
-            height: 38px;
-            border-radius: 10px;
-            font-size: 0.88rem;
-            font-weight: 600;
+        /* --- ТЕЛО РЕДАКТОРА --- */
+        .editor-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column; /* Изменено для размещения панели действий */
+            position: relative;
+            overflow: hidden;
+            background-color: var(--bg-main);
+        }
+
+        /* Новая панель действий с кнопками */
+        .editor-action-bar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 8px 12px;
+            background-color: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            z-index: 10;
+        }
+
+        .btn-action {
             display: flex;
             align-items: center;
             gap: 6px;
+            height: 34px;
+            padding: 0 14px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 600;
             cursor: pointer;
-            flex-shrink: 0;
-            box-shadow: 0 2px 10px var(--accent-glow);
+            transition: all 0.15s;
+            border: 1px solid transparent;
         }
 
-        .btn-run:active {
+        .btn-action:active {
             transform: scale(0.96);
         }
 
-        .editor-body {
+        .btn-save {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            border-color: var(--border);
+        }
+
+        .btn-save:active {
+            border-color: var(--accent);
+        }
+
+        .btn-run {
+            background-color: var(--accent);
+            color: #fff;
+            box-shadow: 0 2px 8px var(--accent-glow);
+        }
+
+        .editor-content {
             flex: 1;
             display: flex;
             position: relative;
             overflow: hidden;
-            background-color: var(--bg-main);
         }
 
         .line-numbers {
@@ -267,7 +301,7 @@
             transform: translateX(-100%);
             transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
             z-index: 30;
-            touch-action: pan-y; /* Разрешаем вертикальный скролл, но перехватываем горизонтальный */
+            touch-action: pan-y;
         }
 
         .file-drawer.open {
@@ -679,16 +713,24 @@
             <i class="fa-solid fa-folder-tree"></i>
         </button>
         <div class="tabs-bar" id="tabsBar"></div>
-        <button class="btn-run" id="runProjectBtn">
-            <i class="fa-solid fa-play"></i> Запуск
-        </button>
     </header>
 
     <main class="editor-body">
-        <div class="line-numbers" id="lineNumbers"></div>
-        <textarea class="code-textarea" id="codeEditor" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" inputmode="text" placeholder="// Создайте новый файл в меню слева"></textarea>
+        <!-- Панель с кнопками Сохранить и Запуск -->
+        <div class="editor-action-bar">
+            <button class="btn-action btn-save" id="saveProjectBtn">
+                <i class="fa-solid fa-floppy-disk"></i> Сохранить
+            </button>
+            <button class="btn-action btn-run" id="runProjectBtn">
+                <i class="fa-solid fa-play"></i> Запуск
+            </button>
+        </div>
 
-        <div class="edge-swipe-area" id="edgeSwipeArea"></div>
+        <div class="editor-content">
+            <div class="line-numbers" id="lineNumbers"></div>
+            <textarea class="code-textarea" id="codeEditor" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" inputmode="text" placeholder="// Создайте новый файл в меню слева"></textarea>
+            <div class="edge-swipe-area" id="edgeSwipeArea"></div>
+        </div>
 
         <div class="drawer-backdrop" id="drawerBackdrop"></div>
         
@@ -1012,13 +1054,28 @@
         }
     });
 
+    // --- Логика кнопки Сохранить ---
+    const saveBtn = document.getElementById('saveProjectBtn');
+    const originalSaveHTML = saveBtn.innerHTML;
+    saveBtn.addEventListener('click', () => {
+        saveState();
+        saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Сохранено';
+        saveBtn.style.color = 'var(--success)';
+        saveBtn.style.borderColor = 'var(--success)';
+        setTimeout(() => {
+            saveBtn.innerHTML = originalSaveHTML;
+            saveBtn.style.color = '';
+            saveBtn.style.borderColor = '';
+        }, 1500);
+    });
+
     // --- Свайп-логика (с блокировкой направления) ---
     let touchStartX = 0;
     let touchStartY = 0;
     let isDraggingDrawer = false;
     let drawerWidthPx = 0;
     let swipeDirection = null;
-    let swipeLocked = false; // Блокировка направления
+    let swipeLocked = false;
 
     const workspaceEl = document.getElementById('workspace');
 
@@ -1029,12 +1086,10 @@
         const isDrawerOpen = fileDrawer.classList.contains('open');
 
         if (!isDrawerOpen) {
-            // Открытие: свайп от нумерации строк или левого края
             if (target.closest('.line-numbers') || target.closest('.edge-swipe-area')) {
                 swipeDirection = 'open';
             }
         } else {
-            // Закрытие: свайп с любой точки файлового менеджера
             if (target.closest('.file-drawer')) {
                 swipeDirection = 'close';
             }
@@ -1057,12 +1112,10 @@
         const deltaX = touch.clientX - touchStartX;
         const deltaY = touch.clientY - touchStartY;
 
-        // Определяем направление, если еще не определили
         if (!swipeLocked) {
             if (Math.abs(deltaX) > Math.abs(deltaY) + 5) {
-                swipeLocked = true; // Заблокировали горизонтальный свайп
+                swipeLocked = true;
             } else if (Math.abs(deltaY) > Math.abs(deltaX) + 5) {
-                // Пользователь явно скроллит вверх/вниз — отменяем свайп
                 isDraggingDrawer = false;
                 resetDrawerStyle();
                 return;
@@ -1070,7 +1123,7 @@
         }
 
         if (swipeLocked) {
-            e.preventDefault(); // Предотвращаем нативный скролл/жесты
+            e.preventDefault();
             if (swipeDirection === 'open' && deltaX > 0) {
                 const move = Math.min(deltaX, drawerWidthPx);
                 fileDrawer.style.transform = `translateX(${-drawerWidthPx + move}px)`;
