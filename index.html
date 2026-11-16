@@ -5,11 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CodeDock Studio</title>
     
-    <!-- Подключение PWA манифеста -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#13131a">
     
-    <!-- Иконки приложения -->
     <link rel="icon" type="image/png" href="icon.png">
     <link rel="apple-touch-icon" href="icon.png">
     
@@ -60,7 +58,6 @@
             overflow: hidden;
         }
 
-        /* --- Шапка с логотипом --- */
         .brand-header {
             display: flex;
             align-items: center;
@@ -175,7 +172,6 @@
             transform: scale(0.96);
         }
 
-        /* --- ТЕЛО РЕДАКТОРА --- */
         .editor-body {
             flex: 1;
             display: flex;
@@ -197,6 +193,7 @@
             user-select: none;
             overflow: hidden;
             border-right: 1px solid var(--border);
+            touch-action: pan-y; /* Разрешаем вертикальный скролл по нумерации */
         }
 
         .line-num-row {
@@ -231,18 +228,16 @@
             autocorrect: off;
         }
 
-        /* Невидимая зона для свайпа слева */
         .edge-swipe-area {
             position: absolute;
             left: 0;
             top: 0;
             bottom: 0;
-            width: 24px;
+            width: 15px;
             z-index: 15;
             touch-action: pan-y;
         }
 
-        /* --- Шторка и затемнение --- */
         .drawer-backdrop {
             position: absolute;
             inset: 0;
@@ -272,7 +267,7 @@
             transform: translateX(-100%);
             transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
             z-index: 30;
-            touch-action: pan-y; /* Отключаем горизонтальный скролл браузера внутри */
+            touch-action: pan-y; /* Отключаем перехват горизонтального свайпа браузером */
         }
 
         .file-drawer.open {
@@ -671,7 +666,7 @@
 </head>
 <body>
 
-<div class="workspace">
+<div class="workspace" id="workspace">
     <div class="brand-header">
         <button class="logo-btn" id="resetCacheBtn" title="Сбросить кэш и перезагрузить">
             <img src="logo.png" alt="CodeDock Studio" class="brand-logo" onerror="this.style.display='none'">
@@ -692,12 +687,10 @@
         <div class="line-numbers" id="lineNumbers"></div>
         <textarea class="code-textarea" id="codeEditor" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" inputmode="text" placeholder="// Создайте новый файл в меню слева"></textarea>
 
-        <!-- Зона свайпа для открытия -->
         <div class="edge-swipe-area" id="edgeSwipeArea"></div>
 
         <div class="drawer-backdrop" id="drawerBackdrop"></div>
         
-        <!-- Панель файлов (свайп для закрытия работает по ней) -->
         <aside class="file-drawer" id="fileDrawer">
             <div class="file-header">
                 <div class="header-title">
@@ -795,9 +788,7 @@
     // Регистрация Service Worker
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js')
-                .then(reg => console.log('Service Worker зарегистрирован'))
-                .catch(err => console.error('Ошибка регистрации Service Worker:', err));
+            navigator.serviceWorker.register('sw.js').catch(err => console.error(err));
         });
     }
 
@@ -805,7 +796,6 @@
     document.getElementById('resetCacheBtn').addEventListener('click', async () => {
         const confirmReset = confirm('Очистить кэш и обновить приложение?');
         if (!confirmReset) return;
-
         try {
             if ('caches' in window) {
                 const cacheNames = await caches.keys();
@@ -813,15 +803,12 @@
             }
             if ('serviceWorker' in navigator) {
                 const registrations = await navigator.serviceWorker.getRegistrations();
-                for (let registration of registrations) {
-                    await registration.unregister();
-                }
+                for (let registration of registrations) await registration.unregister();
             }
-            alert('Кэш успешно сброшен. Перезагрузка...');
+            alert('Кэш сброшен. Перезагрузка...');
             window.location.reload(true);
         } catch (e) {
-            console.error('Ошибка сброса кэша:', e);
-            alert('Ошибка при сбросе кэша: ' + e.message);
+            alert('Ошибка: ' + e.message);
         }
     });
 
@@ -859,8 +846,7 @@
         try { return JSON.parse(json); } catch (e) { return fallback; }
     }
 
-    let fileSystem = safeParse(localStorage.getItem('codedock_tree_v2'), null)
-        || JSON.parse(JSON.stringify(DEFAULT_PROJECT));
+    let fileSystem = safeParse(localStorage.getItem('codedock_tree_v2'), null) || JSON.parse(JSON.stringify(DEFAULT_PROJECT));
     let activeFileId = localStorage.getItem('codedock_active_v2') || '1';
     let creatingType = 'file';
     let editingItemId = null;
@@ -886,9 +872,7 @@
     const customContextMenu = document.getElementById('customContextMenu');
 
     function escapeHtml(str) {
-        return String(str).replace(/[&<>"']/g, c => ({
-            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-        }[c]));
+        return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
 
     function genId() {
@@ -900,9 +884,7 @@
         try {
             localStorage.setItem('codedock_tree_v2', JSON.stringify(fileSystem));
             localStorage.setItem('codedock_active_v2', activeFileId);
-        } catch (e) {
-            console.warn('Не удалось сохранить проект:', e.message);
-        }
+        } catch (e) {}
     }
 
     function getFileIcon(filename) {
@@ -1015,7 +997,7 @@
         }
     });
 
-    // --- Принудительно делаем первую букву маленькой при вводе ---
+    // --- Автопонижение регистра ---
     newItemNameInput.addEventListener('input', (e) => {
         let val = e.target.value;
         if (val.length > 0) {
@@ -1024,45 +1006,48 @@
                 const start = e.target.selectionStart;
                 const end = e.target.selectionEnd;
                 e.target.value = newVal;
-                // Восстанавливаем позицию курсора
                 e.target.setSelectionRange(start, end);
             }
         }
     });
-    // -------------------------------------------------------------
 
-    // --- Свайп-логика для меню ---
+    // --- Свайп-логика (Обновленная) ---
     let touchStartX = 0;
     let touchStartY = 0;
     let isDraggingDrawer = false;
     let drawerWidthPx = 0;
+    let swipeDirection = null; // 'open' или 'close'
 
-    const edgeSwipeArea = document.getElementById('edgeSwipeArea');
+    const workspaceEl = document.getElementById('workspace');
 
     function handleTouchStart(e) {
         if (e.touches.length !== 1) return;
         const touch = e.touches[0];
-        
-        // Открытие (свайп от левого края)
-        if (!fileDrawer.classList.contains('open') && e.currentTarget === edgeSwipeArea) {
-            touchStartX = touch.clientX;
-            touchStartY = touch.clientY;
-            drawerWidthPx = fileDrawer.offsetWidth;
-            isDraggingDrawer = true;
-            fileDrawer.style.transition = 'none';
-            drawerBackdrop.style.transition = 'none';
-        }
-        // Закрытие (свайп по самой панели)
-        else if (fileDrawer.classList.contains('open') && e.currentTarget === fileDrawer) {
-            // Если свайпают по скроллящемуся списку файлов или поиску, не перехватываем
-            if (e.target.closest('.file-tree-container') || e.target.closest('.search-box')) return;
-            
-            touchStartX = touch.clientX;
-            touchStartY = touch.clientY;
-            drawerWidthPx = fileDrawer.offsetWidth;
-            isDraggingDrawer = true;
-            fileDrawer.style.transition = 'none';
-            drawerBackdrop.style.transition = 'none';
+        const target = e.target;
+        const isDrawerOpen = fileDrawer.classList.contains('open');
+
+        if (!isDrawerOpen) {
+            // Открытие: свайп от нумерации строк (line-numbers) или от края (edge-swipe-area)
+            if (target.closest('.line-numbers') || target.closest('.edge-swipe-area')) {
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+                drawerWidthPx = fileDrawer.offsetWidth;
+                isDraggingDrawer = true;
+                swipeDirection = 'open';
+                fileDrawer.style.transition = 'none';
+                drawerBackdrop.style.transition = 'none';
+            }
+        } else {
+            // Закрытие: свайп с любой точки файлового менеджера
+            if (target.closest('.file-drawer')) {
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+                drawerWidthPx = fileDrawer.offsetWidth;
+                isDraggingDrawer = true;
+                swipeDirection = 'close';
+                fileDrawer.style.transition = 'none';
+                drawerBackdrop.style.transition = 'none';
+            }
         }
     }
 
@@ -1072,29 +1057,26 @@
         const deltaX = touch.clientX - touchStartX;
         const deltaY = touch.clientY - touchStartY;
 
-        // Если движение больше по вертикали, отменяем свайп
-        if (Math.abs(deltaY) > Math.abs(deltaX)) {
+        // Если движение больше по вертикали (пользователь скроллит список), отменяем свайп
+        if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 10) {
             isDraggingDrawer = false;
             resetDrawerStyle();
             return;
         }
 
-        e.preventDefault(); // Блокируем скролл страницы во время свайпа
-
-        if (fileDrawer.classList.contains('open')) {
-            // Закрываем
-            if (deltaX > 0) {
-                const move = Math.min(deltaX, drawerWidthPx);
-                fileDrawer.style.transform = `translateX(${move}px)`;
-                drawerBackdrop.style.opacity = 1 - (move / drawerWidthPx);
-            }
-        } else {
-            // Открываем
-            if (deltaX > 0) {
-                const move = Math.min(deltaX, drawerWidthPx);
-                fileDrawer.style.transform = `translateX(${-drawerWidthPx + move}px)`;
-                drawerBackdrop.style.opacity = move / drawerWidthPx;
-            }
+        // Открытие (свайп вправо)
+        if (swipeDirection === 'open' && deltaX > 0 && Math.abs(deltaX) > Math.abs(deltaY)) {
+            e.preventDefault();
+            const move = Math.min(deltaX, drawerWidthPx);
+            fileDrawer.style.transform = `translateX(${-drawerWidthPx + move}px)`;
+            drawerBackdrop.style.opacity = move / drawerWidthPx;
+        } 
+        // Закрытие (свайп влево)
+        else if (swipeDirection === 'close' && deltaX < 0 && Math.abs(deltaX) > Math.abs(deltaY)) {
+            e.preventDefault();
+            const move = Math.abs(deltaX);
+            fileDrawer.style.transform = `translateX(${-move}px)`;
+            drawerBackdrop.style.opacity = 1 - (move / drawerWidthPx);
         }
     }
 
@@ -1108,21 +1090,14 @@
         fileDrawer.style.transition = '';
         drawerBackdrop.style.transition = '';
 
-        if (fileDrawer.classList.contains('open')) {
-            // Если сдвинули больше 30% ширины, закрываем
-            if (deltaX > drawerWidthPx * 0.3) {
-                closeDrawer();
-            } else {
-                openDrawer();
-            }
-        } else {
-            // Если открыли больше 30% ширины, открываем
-            if (deltaX > drawerWidthPx * 0.3) {
-                openDrawer();
-            } else {
-                closeDrawer();
-            }
+        if (swipeDirection === 'open') {
+            if (deltaX > drawerWidthPx * 0.3) openDrawer();
+            else closeDrawer();
+        } else if (swipeDirection === 'close') {
+            if (deltaX < -(drawerWidthPx * 0.3)) closeDrawer();
+            else openDrawer();
         }
+        swipeDirection = null;
     }
 
     function resetDrawerStyle() {
@@ -1132,17 +1107,12 @@
         drawerBackdrop.style.opacity = '';
     }
 
-    // Навешиваем обработчики
-    edgeSwipeArea.addEventListener('touchstart', handleTouchStart, { passive: false });
-    edgeSwipeArea.addEventListener('touchmove', handleTouchMove, { passive: false });
-    edgeSwipeArea.addEventListener('touchend', handleTouchEnd);
+    // Навешиваем события на весь workspace для перехвата любых касаний
+    workspaceEl.addEventListener('touchstart', handleTouchStart, { passive: true });
+    workspaceEl.addEventListener('touchmove', handleTouchMove, { passive: false });
+    workspaceEl.addEventListener('touchend', handleTouchEnd);
 
-    fileDrawer.addEventListener('touchstart', handleTouchStart, { passive: false });
-    fileDrawer.addEventListener('touchmove', handleTouchMove, { passive: false });
-    fileDrawer.addEventListener('touchend', handleTouchEnd);
-    // ---------------------------------------------------------
-
-    // --- Контекстное меню (Долгий тап + Двойной тап) ---
+    // --- Контекстное меню ---
     let longPressTimer = null;
     let touchMoved = false;
     let lastTapTime = 0;
@@ -1220,7 +1190,6 @@
     window.addEventListener('pointerdown', (e) => {
         if (!customContextMenu.contains(e.target)) hideContextMenu();
     });
-    // ---------------------------------------------------------
 
     function legacyCopy(text) {
         const ta = document.createElement('textarea');
@@ -1282,8 +1251,7 @@
             codeEditor.selectionStart = codeEditor.selectionEnd = start + text.length;
             codeEditor.dispatchEvent(new Event('input'));
         } catch (err) {
-            console.warn('Вставка недоступна:', err.message);
-            alert('Вставка из буфера недоступна. Используйте системное меню «Вставить» (долгий тап).');
+            alert('Вставка из буфера недоступна. Используйте системное меню «Вставить».');
         }
     };
 
@@ -1411,9 +1379,7 @@
         if (event) event.stopPropagation();
         editingItemId = null;
         creatingType = 'file';
-        document.querySelectorAll('.type-btn').forEach(b => {
-            b.classList.toggle('active', b.dataset.type === 'file');
-        });
+        document.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === 'file'));
         modalTitle.textContent = 'Новый элемент';
         typeSelector.style.display = 'flex';
         parentFolderField.style.display = 'flex';
@@ -1433,18 +1399,13 @@
         parentFolderField.style.display = 'none';
         newItemNameInput.value = item.name;
         createModal.classList.add('open');
-        setTimeout(() => {
-            newItemNameInput.focus();
-            newItemNameInput.select();
-        }, 50);
+        setTimeout(() => { newItemNameInput.focus(); newItemNameInput.select(); }, 50);
     };
 
     document.getElementById('openCreateModal').onclick = () => {
         editingItemId = null;
         creatingType = 'file';
-        document.querySelectorAll('.type-btn').forEach(b => {
-            b.classList.toggle('active', b.dataset.type === 'file');
-        });
+        document.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === 'file'));
         modalTitle.textContent = 'Новый элемент';
         typeSelector.style.display = 'flex';
         parentFolderField.style.display = 'flex';
@@ -1465,17 +1426,13 @@
     });
 
     function nameExistsInParent(parentId, name, ignoreId) {
-        const siblings = parentId === 'root'
-            ? fileSystem
-            : (findItemById(fileSystem, parentId)?.children || []);
+        const siblings = parentId === 'root' ? fileSystem : (findItemById(fileSystem, parentId)?.children || []);
         return siblings.some(s => s.name.toLowerCase() === name.toLowerCase() && s.id !== ignoreId);
     }
 
     function handleSave() {
         let name = newItemNameInput.value.trim();
         if (!name) return;
-
-        // На всякий случай еще раз делаем маленькую букву при сохранении
         name = name.charAt(0).toLowerCase() + name.slice(1);
 
         if (editingItemId) {
@@ -1515,9 +1472,7 @@
     }
 
     document.getElementById('confirmCreate').onclick = handleSave;
-    newItemNameInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') handleSave();
-    });
+    newItemNameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSave(); });
 
     document.getElementById('fileSearch').addEventListener('input', (e) => {
         searchQuery = e.target.value.trim();
