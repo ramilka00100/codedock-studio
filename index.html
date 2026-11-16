@@ -1489,12 +1489,14 @@
         if (!searchMatches.length || !cmView) return;
         searchIndex = (index + searchMatches.length) % searchMatches.length;
         const match = searchMatches[searchIndex];
-        cmView.focus();
         const startPos = cmView.posFromIndex(match.start);
         const endPos = cmView.posFromIndex(match.end);
         cmView.setSelection(startPos, endPos);
         cmView.scrollIntoView({ from: startPos, to: endPos }, 100);
         searchCount.textContent = `${searchIndex + 1}/${searchMatches.length}`;
+        // ВАЖНО: НЕ вызываем cmView.focus() здесь.
+        // Иначе на мобильных клавиатура переключается на редактор,
+        // и все следующие символы поиска уходят в код, а не в поле поиска.
     }
 
     function replaceCurrent() {
