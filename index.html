@@ -231,6 +231,17 @@
             autocorrect: off;
         }
 
+        /* Невидимая зона для свайпа слева */
+        .edge-swipe-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 24px;
+            z-index: 15;
+            touch-action: pan-y;
+        }
+
         /* --- Шторка и затемнение --- */
         .drawer-backdrop {
             position: absolute;
@@ -261,6 +272,7 @@
             transform: translateX(-100%);
             transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
             z-index: 30;
+            touch-action: pan-y; /* Отключаем горизонтальный скролл браузера внутри */
         }
 
         .file-drawer.open {
@@ -660,10 +672,8 @@
 <body>
 
 <div class="workspace">
-    <!-- Шапка с логотипом -->
     <div class="brand-header">
         <button class="logo-btn" id="resetCacheBtn" title="Сбросить кэш и перезагрузить">
-            <!-- Логотип для шапки (горизонтальный). Если его нет, можно заменить на icon.png -->
             <img src="logo.png" alt="CodeDock Studio" class="brand-logo" onerror="this.style.display='none'">
         </button>
     </div>
@@ -678,12 +688,16 @@
         </button>
     </header>
 
-    <!-- Меню и затемнение перенесены сюда -->
     <main class="editor-body">
         <div class="line-numbers" id="lineNumbers"></div>
         <textarea class="code-textarea" id="codeEditor" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" inputmode="text" placeholder="// Создайте новый файл в меню слева"></textarea>
 
+        <!-- Зона свайпа для открытия -->
+        <div class="edge-swipe-area" id="edgeSwipeArea"></div>
+
         <div class="drawer-backdrop" id="drawerBackdrop"></div>
+        
+        <!-- Панель файлов (свайп для закрытия работает по ней) -->
         <aside class="file-drawer" id="fileDrawer">
             <div class="file-header">
                 <div class="header-title">
@@ -1001,7 +1015,134 @@
         }
     });
 
-    // --- Логика контекстного меню (Долгий тап + Двойной тап) ---
+    // --- Принудительно делаем первую букву маленькой при вводе ---
+    newItemNameInput.addEventListener('input', (e) => {
+        let val = e.target.value;
+        if (val.length > 0) {
+            let newVal = val.charAt(0).toLowerCase() + val.slice(1);
+            if (val !== newVal) {
+                const start = e.target.selectionStart;
+                const end = e.target.selectionEnd;
+                e.target.value = newVal;
+                // Восстанавливаем позицию курсора
+                e.target.setSelectionRange(start, end);
+            }
+        }
+    });
+    // -------------------------------------------------------------
+
+    // --- Свайп-логика для меню ---
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isDraggingDrawer = false;
+    let drawerWidthPx = 0;
+
+    const edgeSwipeArea = document.getElementById('edgeSwipeArea');
+
+    function handleTouchStart(e) {
+        if (e.touches.length !== 1) return;
+        const touch = e.touches[0];
+        
+        // Открытие (свайп от левого края)
+        if (!fileDrawer.classList.contains('open') && e.currentTarget === edgeSwipeArea) {
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+            drawerWidthPx = fileDrawer.offsetWidth;
+            isDraggingDrawer = true;
+            fileDrawer.style.transition = 'none';
+            drawerBackdrop.style.transition = 'none';
+        }
+        // Закрытие (свайп по самой панели)
+        else if (fileDrawer.classList.contains('open') && e.currentTarget === fileDrawer) {
+            // Если свайпают по скроллящемуся списку файлов или поиску, не перехватываем
+            if (e.target.closest('.file-tree-container') || e.target.closest('.search-box')) return;
+            
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+            drawerWidthPx = fileDrawer.offsetWidth;
+            isDraggingDrawer = true;
+            fileDrawer.style.transition = 'none';
+            drawerBackdrop.style.transition = 'none';
+        }
+    }
+
+    function handleTouchMove(e) {
+        if (!isDraggingDrawer) return;
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - touchStartX;
+        const deltaY = touch.clientY - touchStartY;
+
+        // Если движение больше по вертикали, отменяем свайп
+        if (Math.abs(deltaY) > Math.abs(deltaX)) {
+            isDraggingDrawer = false;
+            resetDrawerStyle();
+            return;
+        }
+
+        e.preventDefault(); // Блокируем скролл страницы во время свайпа
+
+        if (fileDrawer.classList.contains('open')) {
+            // Закрываем
+            if (deltaX > 0) {
+                const move = Math.min(deltaX, drawerWidthPx);
+                fileDrawer.style.transform = `translateX(${move}px)`;
+                drawerBackdrop.style.opacity = 1 - (move / drawerWidthPx);
+            }
+        } else {
+            // Открываем
+            if (deltaX > 0) {
+                const move = Math.min(deltaX, drawerWidthPx);
+                fileDrawer.style.transform = `translateX(${-drawerWidthPx + move}px)`;
+                drawerBackdrop.style.opacity = move / drawerWidthPx;
+            }
+        }
+    }
+
+    function handleTouchEnd(e) {
+        if (!isDraggingDrawer) return;
+        isDraggingDrawer = false;
+        
+        const touch = e.changedTouches[0];
+        const deltaX = touch.clientX - touchStartX;
+        
+        fileDrawer.style.transition = '';
+        drawerBackdrop.style.transition = '';
+
+        if (fileDrawer.classList.contains('open')) {
+            // Если сдвинули больше 30% ширины, закрываем
+            if (deltaX > drawerWidthPx * 0.3) {
+                closeDrawer();
+            } else {
+                openDrawer();
+            }
+        } else {
+            // Если открыли больше 30% ширины, открываем
+            if (deltaX > drawerWidthPx * 0.3) {
+                openDrawer();
+            } else {
+                closeDrawer();
+            }
+        }
+    }
+
+    function resetDrawerStyle() {
+        fileDrawer.style.transition = '';
+        drawerBackdrop.style.transition = '';
+        fileDrawer.style.transform = '';
+        drawerBackdrop.style.opacity = '';
+    }
+
+    // Навешиваем обработчики
+    edgeSwipeArea.addEventListener('touchstart', handleTouchStart, { passive: false });
+    edgeSwipeArea.addEventListener('touchmove', handleTouchMove, { passive: false });
+    edgeSwipeArea.addEventListener('touchend', handleTouchEnd);
+
+    fileDrawer.addEventListener('touchstart', handleTouchStart, { passive: false });
+    fileDrawer.addEventListener('touchmove', handleTouchMove, { passive: false });
+    fileDrawer.addEventListener('touchend', handleTouchEnd);
+    // ---------------------------------------------------------
+
+    // --- Контекстное меню (Долгий тап + Двойной тап) ---
     let longPressTimer = null;
     let touchMoved = false;
     let lastTapTime = 0;
@@ -1106,7 +1247,6 @@
         e.preventDefault();
         codeEditor.focus({ preventScroll: true });
         codeEditor.setSelectionRange(0, codeEditor.value.length);
-        // Меню не закрываем, чтобы можно было сразу нажать "Копировать" или "Вырезать"
     };
 
     document.getElementById('ctxCut').onpointerdown = (e) => {
@@ -1171,11 +1311,15 @@
     const closeDrawerBtn = document.getElementById('closeDrawerBtn');
 
     function openDrawer() {
+        fileDrawer.style.transform = '';
+        drawerBackdrop.style.opacity = '';
         fileDrawer.classList.add('open');
         drawerBackdrop.classList.add('open');
     }
 
     function closeDrawer() {
+        fileDrawer.style.transform = '';
+        drawerBackdrop.style.opacity = '';
         fileDrawer.classList.remove('open');
         drawerBackdrop.classList.remove('open');
     }
@@ -1331,7 +1475,7 @@
         let name = newItemNameInput.value.trim();
         if (!name) return;
 
-        // Принудительно делаем первую букву маленькой
+        // На всякий случай еще раз делаем маленькую букву при сохранении
         name = name.charAt(0).toLowerCase() + name.slice(1);
 
         if (editingItemId) {
