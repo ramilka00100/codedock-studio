@@ -464,9 +464,18 @@
             color: var(--text-main);
             border-bottom: 1px solid var(--border);
             gap: 8px;
+            position: relative;
+            z-index: 10;
         }
 
-        .preview-frame { flex: 1; width: 100%; border: none; background: #fff; }
+        .preview-frame { 
+            flex: 1; 
+            width: 100%; 
+            border: none; 
+            background: #fff; 
+            position: relative;
+            z-index: 5;
+        }
 
         .console-panel {
             position: absolute;
@@ -977,13 +986,13 @@
                 <i class="fa-solid fa-globe" style="color:var(--accent);margin-right:6px;"></i>Предпросмотр
             </span>
             <div style="display:flex;gap:8px;align-items:center;">
-                <button class="btn-icon-only" id="previewConsoleBtn" title="Консоль" aria-label="Консоль" style="width:32px;height:32px;">
+                <button type="button" class="btn-icon-only" id="previewConsoleBtn" title="Консоль" aria-label="Консоль" style="width:32px;height:32px;">
                     <i class="fa-solid fa-terminal"></i>
                     <span class="console-dot" id="previewConsoleDot"></span>
                 </button>
-                <!-- ИСПРАВЛЕНА КНОПКА: теперь смотрит влево (назад в редактор) -->
-                <button class="btn-icon-only btn-run" id="closePreviewBtn" title="В редактор" aria-label="В редактор" style="width:32px;height:32px;">
-                    <i class="fa-solid fa-arrow-left"></i>
+                <!-- Кнопка возврата: перевёрнутый на 180 градусов треугольник -->
+                <button type="button" class="btn-icon-only btn-run" id="closePreviewBtn" title="В редактор" aria-label="В редактор" style="width:32px;height:32px;position:relative;z-index:100;">
+                    <i class="fa-solid fa-play" style="transform: rotate(180deg);"></i>
                 </button>
             </div>
         </div>
@@ -1866,7 +1875,14 @@
     }
 
     $('runProjectBtn').addEventListener('click', runProject);
-    $('closePreviewBtn').addEventListener('click', () => $('previewOverlay').classList.remove('open'));
+    
+    // ИСПРАВЛЕННЫЙ ОБРАБОТЧИК КНОПКИ НАЗАД
+    $('closePreviewBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        $('previewOverlay').classList.remove('open');
+        consolePanel.close();
+    });
 
     // --- ZIP ГЕНЕРАТОР ---
     const CRC_TABLE = (() => {
@@ -2624,7 +2640,11 @@
         if (createModal.classList.contains('open')) { closeCreateModal(); return true; }
         if (settingsModal.classList.contains('open')) { settingsModal.classList.remove('open'); return true; }
         if (exportModal.classList.contains('open')) { closeExportModal(); return true; }
-        if ($('previewOverlay').classList.contains('open')) { $('previewOverlay').classList.remove('open'); return true; }
+        if ($('previewOverlay').classList.contains('open')) { 
+            $('previewOverlay').classList.remove('open'); 
+            consolePanel.close();
+            return true; 
+        }
         if (consolePanel.panel.classList.contains('open')) { consolePanel.close(); return true; }
         if (fileDrawer.classList.contains('open')) { closeDrawer(); return true; }
         if (searchPanel.classList.contains('open')) { closeSearch(); return true; }
