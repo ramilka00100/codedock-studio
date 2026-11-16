@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -635,7 +634,6 @@
         <button class="context-menu-item" id="ctxSelectAll"><i class="fa-solid fa-check-double"></i> Выделить всё</button>
         <button class="context-menu-item" id="ctxCut"><i class="fa-solid fa-cut"></i> Вырезать</button>
         <button class="context-menu-item" id="ctxCopy"><i class="fa-regular fa-copy"></i> Копировать</button>
-        <button class="context-menu-item" id="ctxPaste"><i class="fa-regular fa-paste"></i> Вставить</button>
         <button class="context-menu-item" id="ctxClear" style="color:var(--danger);"><i class="fa-regular fa-trash-can" style="color:var(--danger);"></i> Очистить</button>
     </div>
 
@@ -715,7 +713,7 @@
         </div>
         <div class="modal-field">
             <label for="newItemName">Название</label>
-            <input type="text" id="newItemName" placeholder="Например: app.js или assets" autocomplete="off">
+            <input type="text" id="newItemName" placeholder="Например: app.js или assets" autocomplete="off" autocapitalize="off" autocorrect="off">
         </div>
         <div class="modal-actions">
             <button type="button" class="btn-secondary" id="cancelModal">Отмена</button>
@@ -755,7 +753,7 @@
         }
     ];
 
-    let fileSystem = JSON.parse(localStorage.getItem('codedock_tree_v2')) || structuredClone(DEFAULT_PROJECT);
+    let fileSystem = JSON.parse(localStorage.getItem('codedock_tree_v2')) || JSON.parse(JSON.stringify(DEFAULT_PROJECT));
     let activeFileId = localStorage.getItem('codedock_active_v2') || '1';
     let creatingType = 'file';
     let editingItemId = null;
@@ -963,17 +961,11 @@
         hideContextMenu();
     };
 
-    document.getElementById('ctxCopy').onpointerdown = async (e) => {
+    document.getElementById('ctxCopy').onpointerdown = (e) => {
         e.preventDefault();
         const text = codeEditor.value.substring(codeEditor.selectionStart, codeEditor.selectionEnd) || codeEditor.value;
         safeCopy(text);
         hideContextMenu();
-    };
-
-    document.getElementById('ctxPaste').onpointerdown = (e) => {
-        e.preventDefault();
-        hideContextMenu();
-        openPasteModal();
     };
 
     document.getElementById('ctxClear').onpointerdown = (e) => {
@@ -983,67 +975,19 @@
         hideContextMenu();
     };
 
-    function openPasteModal() {
-        const overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:2000;padding:16px;';
+    document.getElementById('symbolBar').addEventListener('click', (e) => {
+        const btn = e.target.closest('.sym-btn');
+        if (!btn || codeEditor.disabled) return;
+        const sym = btn.dataset.sym;
+        const start = codeEditor.selectionStart;
+        const end = codeEditor.selectionEnd;
+        const text = codeEditor.value;
 
-        const card = document.createElement('div');
-        card.style.cssText = 'background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:18px;width:100%;max-width:340px;display:flex;flex-direction:column;gap:12px;';
-
-        const title = document.createElement('div');
-        title.textContent = 'Вставить текст';
-        title.style.cssText = 'font-weight:700;font-size:1.05rem;';
-
-        const hint = document.createElement('div');
-        hint.textContent = 'Браузер не даёт читать буфер обмена напрямую. Вставьте текст в поле ниже (долгий тап → «Вставить»):';
-        hint.style.cssText = 'font-size:0.82rem;color:var(--text-muted);line-height:1.4;';
-
-        const area = document.createElement('textarea');
-        area.setAttribute('autocorrect', 'off');
-        area.style.cssText = 'width:100%;height:110px;background:var(--bg-main);border:1px solid var(--border);border-radius:10px;padding:10px;color:var(--text-main);font-size:0.9rem;outline:none;resize:none;';
-
-        const cancelBtn = document.createElement('button');
-        cancelBtn.textContent = 'Отмена';
-        cancelBtn.className = 'btn-secondary';
-        cancelBtn.style.width = '100%';
-        cancelBtn.style.padding = '10px';
-
-        const okBtn = document.createElement('button');
-        okBtn.textContent = 'Вставить';
-        okBtn.className = 'btn-primary';
-        okBtn.style.width = '100%';
-        okBtn.style.padding = '10px';
-
-        const actions = document.createElement('div');
-        actions.style.cssText = 'display:flex;gap:8px;';
-        actions.appendChild(cancelBtn);
-        actions.appendChild(okBtn);
-
-        card.appendChild(title);
-        card.appendChild(hint);
-        card.appendChild(area);
-        card.appendChild(actions);
-
-        overlay.appendChild(card);
-        document.body.appendChild(overlay);
-        setTimeout(() => area.focus(), 50);
-
-        const insert = () => {
-            const text = area.value;
-            if (text) {
-                const start = codeEditor.selectionStart;
-                const end = codeEditor.selectionEnd;
-                codeEditor.value = codeEditor.value.substring(0, start) + text + codeEditor.value.substring(end);
-                codeEditor.selectionStart = codeEditor.selectionEnd = start + text.length;
-                codeEditor.dispatchEvent(new Event('input'));
-            }
-            overlay.remove();
-        };
-
-        okBtn.onclick = insert;
-        cancelBtn.onclick = () => overlay.remove();
-        overlay.onclick = (ev) => { if (ev.target === overlay) overlay.remove(); };
-    }
+        codeEditor.value = text.substring(0, start) + sym + text.substring(end);
+        codeEditor.selectionStart = codeEditor.selectionEnd = start + sym.length;
+        codeEditor.focus();
+        codeEditor.dispatchEvent(new Event('input'));
+    });
 
     const fileDrawerEl = document.getElementById('fileDrawer');
     const closeDrawerBtn = document.getElementById('closeDrawerBtn');
