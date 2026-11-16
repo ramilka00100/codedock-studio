@@ -225,8 +225,8 @@
         /* Переопределение стилей CodeMirror 5 */
         .CodeMirror {
             height: 100% !important;
-            width: 100% !important; /* Жестко задаем ширину */
-            flex: 1 !important;     /* Заставляем растягиваться во флекс-контейнере */
+            width: 100% !important;
+            flex: 1 !important;
             font-family: var(--editor-font-family);
             font-size: var(--editor-font-size);
             background-color: var(--bg-main);
@@ -253,7 +253,8 @@
             background: rgba(139, 92, 246, 0.3) !important;
         }
 
-        .edge-swipe-area { position: absolute; left: 0; top: 0; bottom: 0; width: 12px; z-index: 15; touch-action: pan-y; }
+        /* Увеличили зону свайпа для удобства */
+        .edge-swipe-area { position: absolute; left: 0; top: 0; bottom: 0; width: 24px; z-index: 15; touch-action: pan-y; }
 
         .drawer-backdrop {
             position: absolute;
@@ -2196,6 +2197,7 @@
     $('closeDrawerBtn').addEventListener('click', closeDrawer);
     drawerBackdrop.addEventListener('click', closeDrawer);
 
+    // Обновленная логика свайпа (с capture: true и расширенной зоной)
     workspaceEl.addEventListener('touchstart', (event) => {
         if (event.touches.length !== 1) return;
         const touch = event.touches[0];
@@ -2204,16 +2206,20 @@
 
         if (target.closest('button') || target.closest('input') || target.closest('a')) return;
 
-        if (!isOpen && (target.closest('.CodeMirror-gutters') || target.closest('.edge-swipe-area'))) {
+        // Разрешаем свайп с любого места в редакторе кода
+        const isEditor = target.closest('.CodeMirror') || target.closest('.editor-content') || target.closest('.edge-swipe-area');
+
+        if (!isOpen && isEditor) {
             gesture = { mode: 'open', startX: touch.clientX, startY: touch.clientY, width: fileDrawer.offsetWidth, locked: false };
         } else if (isOpen && target.closest('.file-drawer')) {
             gesture = { mode: 'close', startX: touch.clientX, startY: touch.clientY, width: fileDrawer.offsetWidth, locked: false };
         }
+        
         if (gesture) {
             fileDrawer.style.transition = 'none';
             drawerBackdrop.style.transition = 'none';
         }
-    }, { passive: true });
+    }, { passive: true, capture: true });
 
     workspaceEl.addEventListener('touchmove', (event) => {
         if (!gesture) return;
@@ -2231,7 +2237,8 @@
         }
         if (!gesture.locked) return;
 
-        event.preventDefault();
+        event.preventDefault(); // Блокируем скролл и выделение при горизонтальном свайпе
+        
         if (gesture.mode === 'open' && deltaX > 0) {
             const move = Math.min(deltaX, gesture.width);
             fileDrawer.style.transform = `translateX(${-gesture.width + move}px)`;
@@ -2241,7 +2248,7 @@
             fileDrawer.style.transform = `translateX(${-move}px)`;
             drawerBackdrop.style.opacity = String(1 - move / gesture.width);
         }
-    }, { passive: false });
+    }, { passive: false, capture: true });
 
     workspaceEl.addEventListener('touchend', (event) => {
         if (!gesture) return;
@@ -2252,7 +2259,7 @@
         if (!locked) return;
         if (mode === 'open') deltaX > width * 0.3 ? openDrawer() : closeDrawer();
         else deltaX < -(width * 0.3) ? closeDrawer() : openDrawer();
-    });
+    }, { capture: true });
 
     function resetDrawerStyle() {
         fileDrawer.style.transition = '';
