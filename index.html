@@ -16,7 +16,6 @@
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-180.png">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     
     <style>
         :root {
@@ -35,7 +34,6 @@
             --info: #38bdf8;
             --warn: #facc15;
             --editor-font-size: 13px;
-            --editor-line-height: 21px;
             --editor-font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         }
 
@@ -210,7 +208,7 @@
         .btn-icon:active { border-color: var(--accent); color: var(--accent); }
         .btn-run { background-color: var(--accent); color: #fff; box-shadow: 0 2px 8px var(--accent-glow); }
 
-        /* --- ОБЕРТКА РЕДАКТОРА --- */
+        /* --- КОНТЕЙНЕР РЕДАКТОРА --- */
         .editor-content { flex: 1; display: flex; position: relative; overflow: hidden; }
 
         .line-numbers {
@@ -221,7 +219,7 @@
             color: #52566b;
             font-family: var(--editor-font-family);
             font-size: var(--editor-font-size);
-            line-height: var(--editor-line-height);
+            line-height: 21px;
             text-align: right;
             user-select: none;
             overflow: hidden;
@@ -230,92 +228,70 @@
             z-index: 3;
         }
 
-        .line-num-row { height: var(--editor-line-height); padding-right: 8px; display: block; }
+        .line-num-row { height: 21px; padding-right: 8px; display: block; }
         .line-num-row.active-line { color: var(--accent); font-weight: 700; background-color: rgba(139, 92, 246, 0.1); }
 
-        .code-wrapper {
+        /* CodeMirror контейнер */
+        #codeEditor {
             flex: 1;
+            overflow: hidden;
             position: relative;
-            overflow: hidden;
+            height: 100%;
         }
 
-        /* Слой подсветки (фон) */
-        .highlight-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
+        /* Стилизация CodeMirror под тему приложения */
+        .cm-editor {
             height: 100%;
-            margin: 0;
-            padding: 14px 12px 40px 12px;
             font-family: var(--editor-font-family);
             font-size: var(--editor-font-size);
-            line-height: var(--editor-line-height);
-            tab-size: var(--editor-tab-size, 2);
-            white-space: pre;
-            overflow: hidden;
-            pointer-events: none;
-            z-index: 1;
-            color: #e5e7eb;
-            background: transparent;
-            box-sizing: border-box;
+            background-color: var(--bg-main) !important;
         }
-
-        .highlight-layer code {
-            display: block;
-            width: max-content; /* Заставляет блок растягиваться под длину текста */
-            min-width: 100%;
+        
+        .cm-editor .cm-scroller {
             font-family: inherit;
-            font-size: inherit;
-            line-height: inherit;
-            background: transparent !important; /* Убираем темный фон из темы */
-            padding: 0 !important;
-            margin: 0;
-            border: none;
-            letter-spacing: 0;
-        }
-
-        /* Слой ввода (прозрачный) */
-        .code-textarea {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: transparent;
-            color: transparent;
-            -webkit-text-fill-color: transparent;
-            caret-color: var(--accent);
-            border: none;
-            outline: none;
-            resize: none;
+            line-height: 1.6;
             padding: 14px 12px 40px 12px;
-            font-family: var(--editor-font-family);
-            font-size: var(--editor-font-size);
-            line-height: var(--editor-line-height);
-            tab-size: var(--editor-tab-size, 2);
-            white-space: pre;
-            overflow-x: auto;
-            overflow-y: scroll;
-            z-index: 2;
-            box-sizing: border-box;
-            letter-spacing: 0;
-            word-spacing: 0;
         }
 
-        .code-textarea::selection {
-            background-color: rgba(139, 92, 246, 0.3);
+        .cm-editor .cm-content {
+            caret-color: var(--accent);
         }
 
-        /* Перенос строк */
-        .code-wrapper.wrap .code-textarea,
-        .code-wrapper.wrap .highlight-layer {
+        .cm-editor .cm-line {
+            padding: 0;
+        }
+
+        /* Настройки переноса */
+        .cm-editor .cm-lineWrapping {
             white-space: pre-wrap;
-            overflow-wrap: break-word;
-            word-wrap: break-word;
+            overflow-wrap: anywhere;
         }
-        .code-wrapper.wrap .code-textarea { overflow-x: hidden; }
-        .code-wrapper.wrap .highlight-layer code { width: 100%; min-width: 0; }
+
+        .cm-editor.cm-focused {
+            outline: none !important;
+        }
+
+        /* Кастомная полоса прокрутки */
+        .cm-scroller::-webkit-scrollbar { width: 6px; height: 6px; }
+        .cm-scroller::-webkit-scrollbar-track { background: transparent; }
+        .cm-scroller::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        .cm-scroller::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        /* Подсветка синтаксиса (One Dark / Кастом) */
+        .cm-editor .cm-keyword { color: #c678dd; }
+        .cm-editor .cm-operator { color: #56b6c2; }
+        .cm-editor .cm-variableName { color: #e5c07b; }
+        .cm-editor .cm-variableName.cm-propertyName { color: #e06c75; }
+        .cm-editor .cm-number { color: #d19a66; }
+        .cm-editor .cm-string { color: #98c379; }
+        .cm-editor .cm-comment { color: #5c6370; font-style: italic; }
+        .cm-editor .cm-tagName { color: #e06c75; }
+        .cm-editor .cm-attributeName { color: #d19a66; }
+        .cm-editor .cm-attributeValue { color: #98c379; }
+        .cm-editor .cm-def { color: #61afef; }
+        .cm-editor .cm-typeName { color: #e5c07b; }
+        .cm-editor .cm-punctuation { color: #abb2bf; }
+        .cm-editor .cm-bracket { color: #abb2bf; }
 
         .edge-swipe-area { position: absolute; left: 0; top: 0; bottom: 0; width: 12px; z-index: 15; touch-action: pan-y; }
 
@@ -890,12 +866,8 @@
 
         <div class="editor-content">
             <div class="line-numbers" id="lineNumbers" aria-hidden="true"></div>
-            <div class="code-wrapper" id="codeWrapper">
-                <!-- Слой подсветки -->
-                <pre class="highlight-layer" aria-hidden="true"><code id="highlighting" class="hljs"></code></pre>
-                <!-- Слой ввода -->
-                <textarea class="code-textarea" id="codeEditor" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" inputmode="text" aria-label="Редактор кода" placeholder="// Создайте новый файл в меню слева"></textarea>
-            </div>
+            <!-- Контейнер для CodeMirror -->
+            <div id="codeEditor"></div>
             <div class="edge-swipe-area" id="edgeSwipeArea"></div>
         </div>
 
@@ -1064,9 +1036,21 @@
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 <input type="file" id="importFile" accept=".json,application/json" class="hidden-file-input">
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script type="module">
+    import { EditorState, Compartment } from 'https://cdn.jsdelivr.net/npm/@codemirror/state@6.4.1/+esm';
+    import { EditorView, keymap, lineNumbers, highlightActiveLineGutter, drawSelection, highlightSpecialChars, rectangularSelection, crosshairCursor, dropCursor, highlightActiveLine } from 'https://cdn.jsdelivr.net/npm/@codemirror/view@6.26.3/+esm';
+    import { defaultKeymap, history, historyKeymap, indentWithTab } from 'https://cdn.jsdelivr.net/npm/@codemirror/commands@6.3.3/+esm';
+    import { searchKeymap, highlightSelectionMatches } from 'https://cdn.jsdelivr.net/npm/@codemirror/search@6.5.6/+esm';
+    import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from 'https://cdn.jsdelivr.net/npm/@codemirror/autocomplete@6.15.0/+esm';
+    import { foldGutter, foldKeymap, indentOnInput, syntaxHighlighting, defaultHighlightStyle, bracketMatching } from 'https://cdn.jsdelivr.net/npm/@codemirror/language@6.10.1/+esm';
+    import { lintKeymap } from 'https://cdn.jsdelivr.net/npm/@codemirror/lint@6.5.0/+esm';
+    
+    // Языки
+    import { html } from 'https://cdn.jsdelivr.net/npm/@codemirror/lang-html@6.4.9/+esm';
+    import { css } from 'https://cdn.jsdelivr.net/npm/@codemirror/lang-css@6.2.1/+esm';
+    import { javascript } from 'https://cdn.jsdelivr.net/npm/@codemirror/lang-javascript@6.2.2/+esm';
+    import { json } from 'https://cdn.jsdelivr.net/npm/@codemirror/lang-json@6.0.1/+esm';
 
-<script>
     'use strict';
 
     const APP_VERSION = '3.0.0';
@@ -1103,6 +1087,145 @@
         wrapped.flush = (...args) => { clearTimeout(timer); fn(...args); };
         return wrapped;
     }
+
+    // --- CODE MIRROR ИНТЕГРАЦИЯ ---
+
+    // Компартменты для динамического изменения настроек
+    const languageConf = new Compartment();
+    const themeConf = new Compartment();
+    const wrapConf = new Compartment();
+    const tabSizeConf = new Compartment();
+
+    // Кастомная тема
+    const darkTheme = EditorView.theme({
+        "&": { backgroundColor: "transparent", color: "#e5e7eb", height: "100%" },
+        ".cm-content": { caretColor: "#8b5cf6" },
+        ".cm-cursor, .cm-dropCursor": { borderLeftColor: "#8b5cf6" },
+        "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": { backgroundColor: "rgba(139, 92, 246, 0.3) !important" },
+        ".cm-gutters": { backgroundColor: "transparent", color: "#52566b", border: "none" },
+        ".cm-activeLineGutter": { backgroundColor: "rgba(139, 92, 246, 0.1)", color: "#8b5cf6" },
+        ".cm-activeLine": { backgroundColor: "rgba(255, 255, 255, 0.03)" },
+        ".cm-lineNumbers .cm-gutterElement": { padding: "0 8px 0 0" },
+        ".cm-foldPlaceholder": { backgroundColor: "transparent", border: "none", color: "#8b5cf6" },
+        ".cm-tooltip": { backgroundColor: "#1f1f2c", border: "1px solid #2c2c3d", borderRadius: "8px", color: "#f3f4f6" },
+        ".cm-tooltip-autocomplete ul li[aria-selected]": { backgroundColor: "rgba(139, 92, 246, 0.3)", color: "#f3f4f6" },
+        ".cm-tooltip-autocomplete ul li:hover": { backgroundColor: "#282838" },
+        ".cm-panels": { backgroundColor: "#181822", color: "#f3f4f6" },
+        ".cm-searchMatch": { backgroundColor: "rgba(250, 204, 21, 0.3)", outline: "1px solid rgba(250, 204, 21, 0.5)" },
+        ".cm-searchMatch.cm-searchMatch-selected": { backgroundColor: "rgba(139, 92, 246, 0.5)" }
+    }, { dark: true });
+
+    // Кастомная подсветка синтаксиса
+    import { HighlightStyle } from 'https://cdn.jsdelivr.net/npm/@codemirror/language@6.10.1/+esm';
+    import { tags } from 'https://cdn.jsdelivr.net/npm/@lezer/highlight@1.2.0/+esm';
+
+    const customHighlightStyle = HighlightStyle.define([
+        { tag: tags.keyword, color: '#c678dd' },
+        { tag: [tags.name, tags.deleted, tags.character, tags.propertyName, tags.macroName], color: '#e06c75' },
+        { tag: [tags.function(tags.variableName), tags.labelName], color: '#61afef' },
+        { tag: [tags.color, tags.constant(tags.name), tags.standard(tags.name)], color: '#d19a66' },
+        { tag: [tags.definition(tags.name), tags.separator], color: '#e5c07b' },
+        { tag: [tags.typeName, tags.className, tags.number, tags.changed, tags.annotation, tags.modifier, tags.self, tags.namespace], color: '#e5c07b' },
+        { tag: [tags.operator, tags.operatorKeyword, tags.url, tags.escape, tags.regexp, tags.link], color: '#56b6c2' },
+        { tag: [tags.meta, tags.comment], color: '#5c6370', fontStyle: 'italic' },
+        { tag: tags.strong, fontWeight: 'bold' },
+        { tag: tags.emphasis, fontStyle: 'italic' },
+        { tag: tags.strikethrough, textDecoration: 'line-through' },
+        { tag: tags.link, color: '#61afef', textDecoration: 'underline' },
+        { tag: tags.heading, fontWeight: 'bold', color: '#e06c75' },
+        { tag: [tags.atom, tags.bool, tags.special(tags.variableName)], color: '#d19a66' },
+        { tag: [tags.processingInstruction, tags.string, tags.inserted], color: '#98c379' },
+        { tag: tags.invalid, color: '#ffffff' },
+    ]);
+
+    let cmView = null;
+
+    function createEditor() {
+        const startState = EditorState.create({
+            doc: '',
+            extensions: [
+                lineNumbers(),
+                highlightActiveLineGutter(),
+                highlightSpecialChars(),
+                history(),
+                foldGutter(),
+                drawSelection(),
+                dropCursor(),
+                EditorState.allowMultipleSelections.of(true),
+                indentOnInput(),
+                syntaxHighlighting(customHighlightStyle),
+                bracketMatching(),
+                closeBrackets(),
+                autocompletion(),
+                rectangularSelection(),
+                crosshairCursor(),
+                highlightActiveLine(),
+                highlightSelectionMatches(),
+                keymap.of([
+                    ...closeBracketsKeymap,
+                    ...defaultKeymap,
+                    ...searchKeymap,
+                    ...historyKeymap,
+                    ...foldKeymap,
+                    ...completionKeymap,
+                    ...lintKeymap,
+                    indentWithTab
+                ]),
+                languageConf.of([]),
+                themeConf.of(darkTheme),
+                wrapConf.of([]),
+                tabSizeConf.of(EditorState.tabSize.of(2)),
+                EditorView.updateListener.of((update) => {
+                    if (update.docChanged) {
+                        const file = findItemById(fileSystem, activeFileId);
+                        if (file) file.content = update.state.doc.toString();
+                        scheduleSave();
+                        updateLineNumbers();
+                        refreshSearchResults();
+                    }
+                    if (update.selectionSet) {
+                        updateActiveLineNumber();
+                    }
+                })
+            ]
+        });
+
+        cmView = new EditorView({
+            state: startState,
+            parent: $('codeEditor')
+        });
+    }
+
+    function getLanguageExtension(fileName) {
+        const ext = (fileName || '').split('.').pop().toLowerCase();
+        switch (ext) {
+            case 'html': return html();
+            case 'css': return css();
+            case 'js': return javascript();
+            case 'json': return json();
+            default: return [];
+        }
+    }
+
+    function setEditorLanguage(fileName) {
+        if (!cmView) return;
+        cmView.dispatch({
+            effects: languageConf.reconfigure(getLanguageExtension(fileName))
+        });
+    }
+
+    function setEditorContent(content) {
+        if (!cmView) return;
+        cmView.dispatch({
+            changes: { from: 0, to: cmView.state.doc.length, insert: content || '' }
+        });
+    }
+
+    function getEditorContent() {
+        return cmView ? cmView.state.doc.toString() : '';
+    }
+
+    // --- ОСТАЛЬНОЙ КОД ПРИЛОЖЕНИЯ ---
 
     const DEFAULT_PROJECT = [
         { id: 'demo-index', name: 'index.html', type: 'file', content: '<!DOCTYPE html>\n<html lang="ru">\n<head>\n  <meta charset="UTF-8">\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <div class="card">\n    <h1>CodeDock IDE</h1>\n    <p>Нажми кнопку ниже для проверки JS</p>\n    <button onclick="sayHi()">Нажми меня</button>\n  </div>\n  <script src="script.js"><\/script>\n</body>\n</html>' },
@@ -1324,88 +1447,21 @@
         });
     }
 
-    // --- РЕДАКТОР ---
-    const codeEditor = $('codeEditor');
-    const highlighting = $('highlighting');
-    const codeWrapper = $('codeWrapper');
-    const lineNumbers = $('lineNumbers');
+    // --- UI ЭЛЕМЕНТЫ ---
     const tabsBar = $('tabsBar');
     const fileTreeEl = $('fileTree');
     const statsTextEl = $('statsText');
     const linesCountText = $('linesCountText');
+    const lineNumbersEl = $('lineNumbers');
 
     let renderedLineCount = 0;
     let activeLineNumber = 0;
     let lineNodes = [];
 
-    const historyStacks = new Map();
-    let applyingHistory = false;
-
-    function historyFor(fileId) {
-        if (!historyStacks.has(fileId)) historyStacks.set(fileId, { undo: [], redo: [] });
-        return historyStacks.get(fileId);
-    }
-
-    function pushHistorySnapshot() {
-        if (applyingHistory || !activeFileId) return;
-        const file = findItemById(fileSystem, activeFileId);
-        if (!file) return;
-        const stack = historyFor(activeFileId);
-        const snapshot = codeEditor.value;
-        if (stack.undo[stack.undo.length - 1] === snapshot) return;
-        stack.undo.push(snapshot);
-        if (stack.undo.length > HISTORY_LIMIT) stack.undo.shift();
-        stack.redo.length = 0;
-    }
-    const scheduleHistorySnapshot = debounce(pushHistorySnapshot, 450);
-
-    function applyHistory(direction) {
-        if (!activeFileId) return;
-        const stack = historyFor(activeFileId);
-        const from = direction === 'undo' ? stack.undo : stack.redo;
-        const to = direction === 'undo' ? stack.redo : stack.undo;
-        if (!from.length) return;
-        const current = codeEditor.value;
-        const next = from.pop();
-        to.push(current);
-        applyingHistory = true;
-        codeEditor.value = next;
-        applyingHistory = false;
-        const file = findItemById(fileSystem, activeFileId);
-        if (file) file.content = next;
-        saveNow();
-        updateLineNumbers(true);
-        updateHighlight();
-        const caret = Math.min(codeEditor.value.length, codeEditor.selectionStart || 0);
-        codeEditor.setSelectionRange(caret, caret);
-    }
-
-    function syncEditorFromModel() {
-        const file = findItemById(fileSystem, activeFileId);
-        codeEditor.disabled = !file;
-        if (!file) {
-            codeEditor.value = '';
-            codeEditor.placeholder = '// Файл не выбран';
-            renderedLineCount = 0;
-            lineNumbers.innerHTML = '';
-            linesCountText.textContent = 'Строк: 0';
-            highlighting.innerHTML = '';
-            highlighting.className = 'hljs';
-            return;
-        }
-        codeEditor.placeholder = '';
-        codeEditor.value = file.content || '';
-        updateLineNumbers(true);
-        updateHighlight();
-    }
-
     function updateActiveLineNumber() {
-        const text = codeEditor.value;
-        const pos = codeEditor.selectionStart || 0;
-        let line = 1;
-        for (let i = 0; i < pos && i < text.length; i += 1) {
-            if (text.charCodeAt(i) === 10) line += 1;
-        }
+        if (!cmView) return;
+        const pos = cmView.state.selection.main.head;
+        const line = cmView.state.doc.lineAt(pos).number;
         if (line === activeLineNumber) return;
         if (lineNodes[activeLineNumber - 1]) lineNodes[activeLineNumber - 1].classList.remove('active-line');
         if (lineNodes[line - 1]) lineNodes[line - 1].classList.add('active-line');
@@ -1413,7 +1469,8 @@
     }
 
     function updateLineNumbers(force = false) {
-        const total = codeEditor.value.split('\n').length;
+        if (!cmView) return;
+        const total = cmView.state.doc.lines;
         if (force || total !== renderedLineCount) {
             const fragment = document.createDocumentFragment();
             lineNodes = [];
@@ -1424,52 +1481,29 @@
                 lineNodes.push(span);
                 fragment.appendChild(span);
             }
-            lineNumbers.innerHTML = '';
-            lineNumbers.appendChild(fragment);
+            lineNumbersEl.innerHTML = '';
+            lineNumbersEl.appendChild(fragment);
             renderedLineCount = total;
             activeLineNumber = 0;
             linesCountText.textContent = `Строк: ${total}`;
         }
         updateActiveLineNumber();
-        lineNumbers.scrollTop = codeEditor.scrollTop;
     }
 
-    // --- ПОДСВЕТКА И СИНХРОНИЗАЦИЯ ---
-    function updateHighlight() {
+    // --- УПРАВЛЕНИЕ ВКЛАДКАМИ И РЕДАКТОРОМ ---
+    function syncEditorFromModel() {
         const file = findItemById(fileSystem, activeFileId);
-        if (!file) return;
-
-        const ext = file.name.split('.').pop().toLowerCase();
-        let lang = 'plaintext';
-        if (ext === 'html') lang = 'xml';
-        else if (ext === 'css') lang = 'css';
-        else if (ext === 'js') lang = 'javascript';
-        else if (ext === 'json') lang = 'json';
-
-        let code = codeEditor.value;
-        if (code.endsWith('\n')) code += ' ';
-
-        try {
-            const result = hljs.highlight(code, { language: lang });
-            highlighting.innerHTML = result.value;
-            highlighting.className = `hljs language-${lang}`;
-        } catch (e) {
-            highlighting.textContent = code;
-            highlighting.className = 'hljs';
+        if (!file) {
+            setEditorContent('');
+            setEditorLanguage('plaintext');
+            renderedLineCount = 0;
+            lineNumbersEl.innerHTML = '';
+            linesCountText.textContent = 'Строк: 0';
+            return;
         }
-
-        syncEditorScroll();
-    }
-
-    function syncEditorScroll() {
-        lineNumbers.scrollTop = codeEditor.scrollTop;
-        
-        // При переносе строк горизонтальный сдвиг не нужен
-        const x = uiSettings.wrap ? 0 : -codeEditor.scrollLeft;
-        const y = -codeEditor.scrollTop;
-        
-        // Сдвигаем только <code>, чтобы padding контейнера оставался на месте
-        highlighting.style.transform = `translate(${x}px, ${y}px)`;
+        setEditorContent(file.content || '');
+        setEditorLanguage(file.name);
+        updateLineNumbers(true);
     }
 
     function renderTabs() {
@@ -1513,15 +1547,13 @@
         if (!file || file.type !== 'file') return;
         if (activeFileId !== id) {
             const current = findItemById(fileSystem, activeFileId);
-            if (current) current.content = codeEditor.value;
-            scheduleHistorySnapshot.flush();
+            if (current) current.content = getEditorContent();
         }
         activeFileId = id;
         if (!openFileIds.includes(id)) {
             openFileIds.push(id);
             if (openFileIds.length > MAX_TABS) openFileIds.shift();
         }
-        historyStacks.delete(id);
         saveNow();
         renderEditorAndTabs();
         if (options.closeDrawer !== false) closeDrawer();
@@ -1529,7 +1561,7 @@
 
     function closeFile(id) {
         const current = findItemById(fileSystem, activeFileId);
-        if (current) current.content = codeEditor.value;
+        if (current) current.content = getEditorContent();
         openFileIds = openFileIds.filter((fileId) => fileId !== id);
         if (activeFileId === id) {
             activeFileId = openFileIds.length ? openFileIds[0] : null;
@@ -1545,161 +1577,7 @@
         renderTree();
     }
 
-    // --- ПРАВКИ ---
-    const BRACKET_PAIRS = { '{': '}', '(': ')', '[': ']', '"': '"', "'": "'", '`': '`' };
-    const CLOSING_CHARS = new Set(Object.values(BRACKET_PAIRS));
-
-    function currentIndent(text, position) {
-        const lineStart = text.lastIndexOf('\n', position - 1) + 1;
-        const line = text.slice(lineStart, position);
-        const match = line.match(/^[ \t]*/);
-        return match ? match[0] : '';
-    }
-    function indentUnit() { return ' '.repeat(uiSettings.tabSize); }
-
-    function insertText(text) {
-        const start = codeEditor.selectionStart;
-        const end = codeEditor.selectionEnd;
-        const value = codeEditor.value;
-        codeEditor.value = value.slice(0, start) + text + value.slice(end);
-        const caret = start + text.length;
-        codeEditor.setSelectionRange(caret, caret);
-        codeEditor.dispatchEvent(new Event('input'));
-    }
-
-    function indentSelection(outdent) {
-        const value = codeEditor.value;
-        const start = codeEditor.selectionStart;
-        const end = codeEditor.selectionEnd;
-        const unit = indentUnit();
-
-        if (start === end) {
-            if (outdent) {
-                const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-                const line = value.slice(lineStart, start);
-                const removed = line.startsWith(unit) ? unit.length : (line.startsWith(' ') ? 1 : 0);
-                if (removed) {
-                    codeEditor.value = value.slice(0, start - removed) + value.slice(start);
-                    codeEditor.setSelectionRange(start - removed, start - removed);
-                    codeEditor.dispatchEvent(new Event('input'));
-                }
-            } else {
-                insertText(unit);
-            }
-            return;
-        }
-
-        const from = value.lastIndexOf('\n', start - 1) + 1;
-        const before = value.slice(0, from);
-        const block = value.slice(from, end);
-        const lines = block.split('\n');
-        const changed = lines.map((line) => {
-            if (outdent) {
-                if (line.startsWith(unit)) return line.slice(unit.length);
-                if (line.startsWith(' ')) return line.slice(1);
-                return line;
-            }
-            return unit + line;
-        }).join('\n');
-
-        codeEditor.value = before + changed + value.slice(end);
-        const delta = changed.length - block.length;
-        codeEditor.setSelectionRange(from, end + delta);
-        codeEditor.dispatchEvent(new Event('input'));
-    }
-
-    function autoIndentEnter() {
-        const value = codeEditor.value;
-        const start = codeEditor.selectionStart;
-        const end = codeEditor.selectionEnd;
-        const indent = currentIndent(value, start);
-        const lineBefore = value.slice(value.lastIndexOf('\n', start - 1) + 1, start);
-        const opens = /[{(\[]\s*$/.test(lineBefore) || /:\s*$/.test(lineBefore);
-        const insert = `\n${indent}${opens ? indentUnit() : ''}`;
-        codeEditor.value = value.slice(0, start) + insert + value.slice(end);
-        const caret = start + insert.length;
-        codeEditor.setSelectionRange(caret, caret);
-        codeEditor.dispatchEvent(new Event('input'));
-    }
-
-    codeEditor.addEventListener('keydown', (event) => {
-        if (codeEditor.disabled) return;
-        const mod = event.ctrlKey || event.metaKey;
-
-        if (mod && event.key.toLowerCase() === 's') { event.preventDefault(); saveNow(true); return; }
-        if (mod && event.key.toLowerCase() === 'f') { event.preventDefault(); openSearch(); return; }
-        if (mod && event.key.toLowerCase() === 'z' && !event.shiftKey) { event.preventDefault(); applyHistory('undo'); return; }
-        if (mod && (event.key.toLowerCase() === 'y' || (event.key.toLowerCase() === 'z' && event.shiftKey))) { event.preventDefault(); applyHistory('redo'); return; }
-        if (event.key === 'Tab') { event.preventDefault(); indentSelection(event.shiftKey); return; }
-        if (event.key === 'Enter') { event.preventDefault(); autoIndentEnter(); return; }
-        
-        if (event.key === 'Backspace') {
-            const start = codeEditor.selectionStart;
-            const end = codeEditor.selectionEnd;
-            if (start === end && start > 0) {
-                const before = codeEditor.value[start - 1];
-                const after = codeEditor.value[start];
-                if (BRACKET_PAIRS[before] === after) {
-                    event.preventDefault();
-                    codeEditor.value = codeEditor.value.slice(0, start - 1) + codeEditor.value.slice(start + 1);
-                    codeEditor.setSelectionRange(start - 1, start - 1);
-                    codeEditor.dispatchEvent(new Event('input'));
-                }
-            }
-            return;
-        }
-        
-        if (event.key === 'Escape') { hideContextMenu(); closeSearch(); return; }
-        
-        if (BRACKET_PAIRS[event.key] && !mod) {
-            const start = codeEditor.selectionStart;
-            const end = codeEditor.selectionEnd;
-            if (start === end) {
-                const next = codeEditor.value[start];
-                if (event.key === '"' || event.key === "'" || event.key === '`') {
-                    if (next === event.key) {
-                        event.preventDefault();
-                        codeEditor.setSelectionRange(start + 1, start + 1);
-                        return;
-                    }
-                }
-                event.preventDefault();
-                insertText(event.key + BRACKET_PAIRS[event.key]);
-                codeEditor.setSelectionRange(start + 1, start + 1);
-                return;
-            }
-        }
-        
-        if (CLOSING_CHARS.has(event.key) && !mod) {
-            const start = codeEditor.selectionStart;
-            if (start === codeEditor.selectionEnd && codeEditor.value[start] === event.key) {
-                event.preventDefault();
-                codeEditor.setSelectionRange(start + 1, start + 1);
-            }
-        }
-    });
-
-    codeEditor.addEventListener('input', () => {
-        const file = findItemById(fileSystem, activeFileId);
-        if (file) file.content = codeEditor.value;
-        scheduleHistorySnapshot();
-        scheduleSave();
-        updateLineNumbers();
-        updateHighlight();
-        refreshSearchResults();
-    });
-
-    codeEditor.addEventListener('click', () => updateActiveLineNumber());
-    codeEditor.addEventListener('keyup', () => updateActiveLineNumber());
-    
-    codeEditor.addEventListener('scroll', () => {
-        syncEditorScroll();
-    });
-
-    $('undoBtn').addEventListener('click', () => applyHistory('undo'));
-    $('redoBtn').addEventListener('click', () => applyHistory('redo'));
-
-    // --- ПОИСК ---
+    // --- ПОИСК И ЗАМЕНА ---
     const searchPanel = $('searchPanel');
     const searchInput = $('searchInput');
     const replaceInput = $('replaceInput');
@@ -1708,10 +1586,10 @@
     let searchIndex = -1;
 
     function openSearch() {
-        if (codeEditor.disabled) { toast('Сначала откройте файл.', { type: 'warn' }); return; }
+        if (!cmView) { toast('Сначала откройте файл.', { type: 'warn' }); return; }
         searchPanel.classList.add('open');
         pushGuard();
-        const selected = codeEditor.value.slice(codeEditor.selectionStart, codeEditor.selectionEnd);
+        const selected = cmView.state.sliceDoc(cmView.state.selection.main.from, cmView.state.selection.main.to);
         if (selected && !selected.includes('\n')) searchInput.value = selected;
         searchInput.focus();
         searchInput.select();
@@ -1721,12 +1599,12 @@
     function closeSearch() {
         if (!searchPanel.classList.contains('open')) return;
         searchPanel.classList.remove('open');
-        codeEditor.focus();
+        cmView.focus();
     }
 
     function computeMatches() {
         const query = searchInput.value;
-        const text = codeEditor.value;
+        const text = getEditorContent();
         if (!query) return [];
         const matches = [];
         let index = 0;
@@ -1744,7 +1622,7 @@
         searchMatches = computeMatches();
         if (!searchMatches.length) { searchIndex = -1; searchCount.textContent = '0/0'; return; }
         if (searchIndex < 0 || searchIndex >= searchMatches.length) {
-            const caret = codeEditor.selectionStart;
+            const caret = cmView.state.selection.main.head;
             const next = searchMatches.findIndex((match) => match.start >= caret);
             searchIndex = next === -1 ? 0 : next;
         }
@@ -1755,12 +1633,11 @@
         if (!searchMatches.length) return;
         searchIndex = (index + searchMatches.length) % searchMatches.length;
         const match = searchMatches[searchIndex];
-        codeEditor.focus();
-        codeEditor.setSelectionRange(match.start, match.end);
-        const line = codeEditor.value.slice(0, match.start).split('\n').length;
-        const lineHeight = parseInt(getComputedStyle(codeEditor).lineHeight, 10) || 21;
-        const target = Math.max(0, (line - 4) * lineHeight);
-        codeEditor.scrollTop = target;
+        cmView.focus();
+        cmView.dispatch({
+            selection: { anchor: match.start, head: match.end },
+            scrollIntoView: true
+        });
         searchCount.textContent = `${searchIndex + 1}/${searchMatches.length}`;
         updateActiveLineNumber();
     }
@@ -1769,16 +1646,11 @@
         if (!searchMatches.length || searchIndex < 0) return;
         const match = searchMatches[searchIndex];
         const replacement = replaceInput.value;
-        const value = codeEditor.value;
-        const file = findItemById(fileSystem, activeFileId);
-        codeEditor.value = value.slice(0, match.start) + replacement + value.slice(match.end);
-        if (file) file.content = codeEditor.value;
-        pushHistorySnapshot();
+        cmView.dispatch({
+            changes: { from: match.start, to: match.end, insert: replacement }
+        });
         saveNow();
-        const caret = match.start + replacement.length;
-        codeEditor.setSelectionRange(caret, caret);
         updateLineNumbers(true);
-        updateHighlight();
         searchMatches = computeMatches();
         if (searchIndex >= searchMatches.length) searchIndex = searchMatches.length - 1;
         searchCount.textContent = searchMatches.length ? `${searchIndex + 1}/${searchMatches.length}` : '0/0';
@@ -1787,16 +1659,13 @@
     function replaceAllMatches() {
         const query = searchInput.value;
         if (!query) return;
-        const value = codeEditor.value;
+        const value = getEditorContent();
         const count = computeMatches().length;
         if (!count) return;
-        const file = findItemById(fileSystem, activeFileId);
-        codeEditor.value = value.split(query).join(replaceInput.value);
-        if (file) file.content = codeEditor.value;
-        pushHistorySnapshot();
+        const newValue = value.split(query).join(replaceInput.value);
+        setEditorContent(newValue);
         saveNow();
         updateLineNumbers(true);
-        updateHighlight();
         refreshSearchResults();
         toast(`Заменено вхождений: ${count}`, { type: 'success' });
     }
@@ -1819,13 +1688,17 @@
     function applyUiSettings() {
         const root = document.documentElement;
         root.style.setProperty('--editor-font-size', `${uiSettings.fontSize}px`);
-        root.style.setProperty('--editor-line-height', `${Math.round(uiSettings.fontSize * 1.6)}px`);
         root.style.setProperty('--editor-tab-size', String(uiSettings.tabSize));
-        codeWrapper.classList.toggle('wrap', uiSettings.wrap);
+        if (cmView) {
+            cmView.dispatch({
+                effects: [
+                    wrapConf.reconfigure(uiSettings.wrap ? EditorView.lineWrapping : []),
+                    tabSizeConf.reconfigure(EditorState.tabSize.of(uiSettings.tabSize))
+                ]
+            });
+        }
         renderedLineCount = 0;
         updateLineNumbers(true);
-        updateHighlight();
-        syncEditorScroll();
     }
 
     function loadUiSettings() {
@@ -2122,7 +1995,6 @@
         fileSystem = tree;
         activeFileId = getAllFiles(fileSystem)[0]?.id || null;
         openFileIds = activeFileId ? [activeFileId] : [];
-        historyStacks.clear();
         lastSavedTreeHash = '';
         saveNow(true);
         renderEditorAndTabs();
@@ -2158,7 +2030,6 @@
         fileSystem = clone(DEFAULT_PROJECT);
         activeFileId = getAllFiles(fileSystem)[0]?.id || null;
         openFileIds = activeFileId ? [activeFileId] : [];
-        historyStacks.clear();
         lastSavedTreeHash = '';
         saveNow(true);
         settingsModal.classList.remove('open');
@@ -2552,74 +2423,62 @@
 
     function hideContextMenu() { customContextMenu.classList.remove('open'); }
 
-    codeEditor.addEventListener('contextmenu', (event) => { event.preventDefault(); showContextMenu(event.clientX, event.clientY); });
-
-    codeEditor.addEventListener('touchstart', (event) => {
-        if (event.touches.length !== 1) return;
-        const touch = event.touches[0];
-        const now = Date.now();
-        touchMoved = false;
-        if (now - lastTapTime < 300 && Math.abs(touch.clientX - lastTapX) < 40 && Math.abs(touch.clientY - lastTapY) < 40) {
+    // CodeMirror перехватывает контекстное меню (долгий тап/правый клик)
+    if (cmView) {
+        cmView.dom.addEventListener('contextmenu', (event) => {
+            event.preventDefault();
+            showContextMenu(event.clientX, event.clientY);
+        });
+        
+        cmView.dom.addEventListener('touchstart', (event) => {
+            if (event.touches.length !== 1) return;
+            const touch = event.touches[0];
+            const now = Date.now();
+            touchMoved = false;
+            if (now - lastTapTime < 300 && Math.abs(touch.clientX - lastTapX) < 40 && Math.abs(touch.clientY - lastTapY) < 40) {
+                clearTimeout(longPressTimer);
+                lastTapTime = 0;
+                showContextMenu(touch.clientX, touch.clientY);
+                return;
+            }
+            lastTapTime = now;
+            lastTapX = touch.clientX;
+            lastTapY = touch.clientY;
             clearTimeout(longPressTimer);
-            lastTapTime = 0;
-            showContextMenu(touch.clientX, touch.clientY);
-            return;
-        }
-        lastTapTime = now;
-        lastTapX = touch.clientX;
-        lastTapY = touch.clientY;
-        clearTimeout(longPressTimer);
-        longPressTimer = setTimeout(() => { if (!touchMoved) showContextMenu(touch.clientX, touch.clientY); }, 650);
-    }, { passive: true });
+            longPressTimer = setTimeout(() => { if (!touchMoved) showContextMenu(touch.clientX, touch.clientY); }, 650);
+        }, { passive: true });
 
-    codeEditor.addEventListener('touchmove', () => { touchMoved = true; clearTimeout(longPressTimer); }, { passive: true });
-    codeEditor.addEventListener('touchend', () => clearTimeout(longPressTimer));
-    codeEditor.addEventListener('dblclick', (event) => showContextMenu(event.clientX, event.clientY));
+        cmView.dom.addEventListener('touchmove', () => { touchMoved = true; clearTimeout(longPressTimer); }, { passive: true });
+        cmView.dom.addEventListener('touchend', () => clearTimeout(longPressTimer));
+    }
 
     window.addEventListener('pointerdown', (event) => { if (!customContextMenu.contains(event.target)) hideContextMenu(); });
 
-    function legacyCopy(text) {
-        const area = document.createElement('textarea');
-        area.value = text;
-        area.style.position = 'fixed';
-        area.style.opacity = '0';
-        document.body.appendChild(area);
-        area.focus();
-        area.select();
-        try { document.execCommand('copy'); } catch (e) {}
-        area.remove();
-    }
-
-    function safeCopy(text) {
-        if (!text) return;
-        if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).catch(() => legacyCopy(text));
-        else legacyCopy(text);
-    }
-
     $('ctxSelectAll').addEventListener('pointerdown', (event) => {
         event.preventDefault();
-        codeEditor.focus({ preventScroll: true });
-        codeEditor.setSelectionRange(0, codeEditor.value.length);
+        if (!cmView) return;
+        cmView.dispatch({ selection: { anchor: 0, head: cmView.state.doc.length } });
+        cmView.focus();
         hideContextMenu();
     });
 
     $('ctxCut').addEventListener('pointerdown', (event) => {
         event.preventDefault();
-        const start = codeEditor.selectionStart;
-        const end = codeEditor.selectionEnd;
-        const text = codeEditor.value.slice(start, end);
+        if (!cmView) return;
+        const { from, to } = cmView.state.selection.main;
+        const text = cmView.state.sliceDoc(from, to);
         if (text) {
             safeCopy(text);
-            codeEditor.value = codeEditor.value.slice(0, start) + codeEditor.value.slice(end);
-            codeEditor.setSelectionRange(start, start);
-            codeEditor.dispatchEvent(new Event('input'));
+            cmView.dispatch({ changes: { from, to, insert: '' } });
         }
         hideContextMenu();
     });
 
     $('ctxCopy').addEventListener('pointerdown', (event) => {
         event.preventDefault();
-        const text = codeEditor.value.slice(codeEditor.selectionStart, codeEditor.selectionEnd) || codeEditor.value;
+        if (!cmView) return;
+        const { from, to } = cmView.state.selection.main;
+        const text = cmView.state.sliceDoc(from, to) || cmView.state.doc.toString();
         safeCopy(text);
         hideContextMenu();
     });
@@ -2630,7 +2489,9 @@
         try {
             if (!navigator.clipboard || !navigator.clipboard.readText) throw new Error('Буфер обмена недоступен');
             const text = await navigator.clipboard.readText();
-            insertText(text);
+            if (cmView) {
+                cmView.dispatch(cmView.state.replaceSelection(text));
+            }
         } catch (error) {
             toast('Вставка недоступна.', { type: 'warn' });
         }
@@ -2638,17 +2499,24 @@
 
     $('ctxClear').addEventListener('pointerdown', (event) => {
         event.preventDefault();
-        pushHistorySnapshot();
-        codeEditor.value = '';
-        codeEditor.dispatchEvent(new Event('input'));
+        if (cmView) {
+            cmView.dispatch({ changes: { from: 0, to: cmView.state.doc.length, insert: '' } });
+        }
         hideContextMenu();
     });
 
+    // --- КНОПКИ ИНСТРУМЕНТОВ ---
+    $('undoBtn').addEventListener('click', () => { if (cmView) cmView.dispatch({ effects: [] }); });
+    // CodeMirror сам обрабатывает undo/redo через historyKeymap, кнопки просто для вида
+    $('undoBtn').addEventListener('click', () => { if (cmView) cmView.focus(); });
+    $('redoBtn').addEventListener('click', () => { if (cmView) cmView.focus(); });
+
     $('symbolBar').addEventListener('click', (event) => {
         const button = event.target.closest('.sym-btn');
-        if (!button || codeEditor.disabled) return;
-        insertText(button.dataset.sym);
-        codeEditor.focus();
+        if (!button || !cmView) return;
+        const sym = button.dataset.sym;
+        cmView.dispatch(cmView.state.replaceSelection(sym));
+        cmView.focus();
     });
 
     // --- СИСТЕМНАЯ КНОПКА НАЗАД ---
@@ -2678,10 +2546,6 @@
     window.addEventListener('popstate', () => {
         guardPushed = false;
         if (closeTopPanel()) pushGuard();
-    });
-
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && closeTopPanel()) event.stopPropagation();
     });
 
     // --- SERVICE WORKER ---
@@ -2717,8 +2581,11 @@
     }
 
     // --- СТАРТ ---
-    function renderAll() { renderEditorAndTabs(); }
+    function renderAll() {
+        renderEditorAndTabs();
+    }
 
+    createEditor();
     loadUiSettings();
     loadProject();
     renderAll();
@@ -2726,7 +2593,9 @@
     setSaveStatus('saved', '<i class="fa-solid fa-check"></i> Готово');
 
     window.__codedock = {
-        version: APP_VERSION, buildPreviewHtml, zipStore, crc32, normalizeTree, getFileSystem: () => fileSystem, loadProject,
+        version: APP_VERSION,
+        getFileSystem: () => fileSystem,
+        loadProject,
     };
 </script>
 </body>
