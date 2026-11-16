@@ -1097,15 +1097,13 @@
                 indentUnit: 2,
                 lineWrapping: true,
                 autoCloseBrackets: true,
-                autoCloseTags: true, // Включаем автозакрытие HTML-тегов
+                autoCloseTags: true,
                 matchBrackets: true,
                 styleActiveLine: true
             });
 
-            // Принудительно задаем размер на 100% ширины и высоты
             cmView.setSize("100%", "100%");
 
-            // Синхронизация изменений с моделью
             cmView.on("change", () => {
                 const file = findItemById(fileSystem, activeFileId);
                 if (file) file.content = cmView.getValue();
@@ -1114,10 +1112,8 @@
                 refreshSearchResults();
             });
             
-            // Принудительный рендер (чтобы не было пустого экрана при загрузке)
             setTimeout(() => { cmView.refresh(); }, 100);
 
-            // Обновление редактора при изменении размера окна
             window.addEventListener('resize', () => {
                 if (cmView) cmView.refresh();
             });
@@ -1489,11 +1485,7 @@
         if (cmView) cmView.focus();
     }
 
-    // Возвращает { haystack, needle, lengthSafe } — строки, в которых надо искать,
-    // плюс признак, что индексы совпадают с исходными (для posFromIndex).
     function buildSearchStrings(rawQuery, rawText) {
-        // 1) NFC-нормализация — лечит й/ё в разложенной форме (и+◌̆ / е+◌̈).
-        //    Применяем только если длины не изменились, иначе индексы «поедут».
         let query = rawQuery;
         let text = rawText;
         try {
@@ -1505,16 +1497,13 @@
                     text = nt;
                 }
             }
-        } catch (e) { /* очень старый браузер — работаем с сырыми строками */ }
+        } catch (e) { }
 
-        // 2) Регистронезависимый поиск — toLowerCase сохраняет длину
-        //    для латиницы и кириллицы (типичный случай).
         const lowerQuery = query.toLowerCase();
         const lowerText = text.toLowerCase();
         if (lowerQuery.length === query.length && lowerText.length === text.length) {
             return { haystack: lowerText, needle: lowerQuery, lengthSafe: true, queryLength: query.length };
         }
-        // 3) Fallback: редкие языки (İ, ß и т.п.), где toLowerCase меняет длину.
         return { haystack: text, needle: query, lengthSafe: false, queryLength: query.length };
     }
 
@@ -1558,9 +1547,7 @@
         cmView.setSelection(startPos, endPos);
         cmView.scrollIntoView({ from: startPos, to: endPos }, 100);
         searchCount.textContent = `${searchIndex + 1}/${searchMatches.length}`;
-        // ВАЖНО: НЕ вызываем cmView.focus() здесь.
-        // Иначе на мобильных клавиатура переключается на редактор,
-        // и все следующие символы поиска уходят в код, а не в поле поиска.
+        // НЕ вызываем cmView.focus(), чтобы фокус не улетал из инпута
     }
 
     function replaceCurrent() {
@@ -1580,9 +1567,6 @@
         const matches = computeMatches();
         if (!matches.length) return;
 
-        // Заменяем по позициям, а не split/join — это единственный корректный
-        // способ при регистронезависимом поиске (иначе можно сломать регистр
-        // или заменить не то, что подсвечено).
         const value = getEditorContent();
         const replacement = replaceInput.value;
         let result = '';
@@ -1764,14 +1748,11 @@
             line.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${safe}${stackHtml}</span>`;
             this.output.appendChild(line);
 
-            // Если это ошибка — принудительно открываем консоль
             if (type === 'error') {
                 this.open();
             } else if (!this.panel.classList.contains('open')) {
-                // Если это не ошибка, но консоль закрыта, просто показываем точку
                 this.dots.forEach(d => d.classList.add('show'));
             } else {
-                // Если консоль открыта, скроллим вниз
                 this.output.scrollTop = this.output.scrollHeight;
             }
         }
@@ -1796,7 +1777,6 @@
         const htmlFile = files.find((f) => f.name.toLowerCase() === 'index.html') || files.find((f) => f.name.toLowerCase().endsWith('.html'));
         if (!htmlFile) { toast('Файл index.html не найден.', { type: 'error' }); return; }
 
-        // Всегда используем srcdoc, чтобы избежать проблем с Service Worker на GitHub Pages
         const html = buildPreviewHtml(files);
         $('previewFrame').srcdoc = html;
 
@@ -2052,4 +2032,477 @@
                         <span>${escapeHtml(item.name)}</span>
                     </div>
                     <div class="tree-actions">
-                        <button class="action-icon" data-action="create" aria-label="Создать внутри"><i class="fa-solid fa-plus
+                        <button class="action-icon" data-action="create" aria-label="Создать внутри"><i class="fa-solid fa-plus"></i></button>
+                        <button class="action-icon" data-action="rename" aria-label="Переименовать"><i class="fa-solid fa-pen"></i></button>
+                        <button class="action-icon delete" data-action="delete" aria-label="Удалить"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                const children = document.createElement('div');
+                children.className = `folder-children ${item.isOpen ? 'open' : ''}`;
+
+                header.addEventListener('click', (event) => {
+                    const button = event.target.closest('button[data-action]');
+                    if (button) {
+                        event.stopPropagation();
+                        if (button.dataset.action === 'create') openCreateInFolder(item.id);
+                        else if (button.dataset.action === 'rename') openRenameModal(item.id);
+                        else deleteItem(item.id);
+                        return;
+                    }
+                    if (query) return;
+                    const real = findItemById(fileSystem, item.id);
+                    if (real) { real.isOpen = !real.isOpen; saveNow(); renderTree(); }
+                });
+
+                wrapper.appendChild(header);
+                wrapper.appendChild(children);
+                parentElement.appendChild(wrapper);
+                if (item.children && item.children.length) createNodes(item.children, children);
+            });
+        };
+
+        createNodes(visible, fileTreeEl);
+        statsTextEl.textContent = `Файлов: ${fileCount} | Папок: ${folderCount}`;
+    }
+
+    function filterTree(items, query) {
+        if (!query) return items;
+        const result = [];
+        for (const item of items) {
+            if (item.type === 'file') {
+                if (item.name.toLowerCase().includes(query)) result.push(item);
+            } else {
+                const children = filterTree(item.children || [], query);
+                if (item.name.toLowerCase().includes(query) || children.length) {
+                    result.push({ ...item, isOpen: true, children });
+                }
+            }
+        }
+        return result;
+    }
+
+    // --- МОДАЛКИ ---
+    const createModal = $('createModal');
+    const newItemNameInput = $('newItemName');
+    const parentFolderSelect = $('parentFolderSelect');
+    const modalTitle = $('modalTitle');
+    const typeSelector = $('typeSelector');
+    const parentFolderField = $('parentFolderField');
+
+    let creatingType = 'file';
+    let editingItemId = null;
+    let modalParentId = null;
+
+    function populateFolderSelect(selectedId = 'root') {
+        parentFolderSelect.innerHTML = '<option value="root">/ (Корень проекта)</option>';
+        const traverse = (items, prefix = '') => {
+            items.forEach((item) => {
+                if (item.type === 'folder') {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = `${prefix}/${item.name}`;
+                    parentFolderSelect.appendChild(option);
+                    if (item.children) traverse(item.children, `${prefix}/${item.name}`);
+                }
+            });
+        };
+        traverse(fileSystem);
+        parentFolderSelect.value = selectedId;
+    }
+
+    function openCreateModal(parentId = 'root') {
+        editingItemId = null;
+        modalParentId = parentId;
+        creatingType = 'file';
+        document.querySelectorAll('.type-btn').forEach((button) => button.classList.toggle('active', button.dataset.type === 'file'));
+        modalTitle.textContent = 'Новый элемент';
+        typeSelector.style.display = 'flex';
+        parentFolderField.style.display = 'flex';
+        populateFolderSelect(parentId);
+        newItemNameInput.value = '';
+        createModal.classList.add('open');
+        pushGuard();
+        setTimeout(() => newItemNameInput.focus(), 60);
+    }
+
+    function openCreateInFolder(folderId) { openCreateModal(folderId); }
+
+    function openRenameModal(id) {
+        const item = findItemById(fileSystem, id);
+        if (!item) return;
+        editingItemId = id;
+        modalParentId = (getParent(fileSystem, id) || {}).id || null;
+        modalTitle.textContent = 'Переименовать';
+        typeSelector.style.display = 'none';
+        parentFolderField.style.display = 'none';
+        newItemNameInput.value = item.name;
+        createModal.classList.add('open');
+        pushGuard();
+        setTimeout(() => { newItemNameInput.focus(); newItemNameInput.select(); }, 60);
+    }
+
+    function closeCreateModal() { createModal.classList.remove('open'); editingItemId = null; }
+
+    $('openCreateModal').addEventListener('click', () => openCreateModal('root'));
+    $('cancelModal').addEventListener('click', closeCreateModal);
+    createModal.addEventListener('click', (event) => { if (event.target === createModal) closeCreateModal(); });
+    document.querySelectorAll('.type-btn').forEach((button) => {
+        button.addEventListener('click', () => {
+            document.querySelectorAll('.type-btn').forEach((item) => item.classList.remove('active'));
+            button.classList.add('active');
+            creatingType = button.dataset.type;
+        });
+    });
+
+    function handleSaveItem() {
+        const raw = newItemNameInput.value.trim();
+        if (!raw) return;
+        const name = raw.replace(/[/\\]/g, '-');
+
+        if (editingItemId) {
+            const item = findItemById(fileSystem, editingItemId);
+            if (!item) return;
+            if (nameExists(modalParentId, name, editingItemId)) { toast('Такое имя уже есть.', { type: 'error' }); return; }
+            if (item.name !== name) { item.name = name; saveNow(true); }
+            closeCreateModal();
+            renderEditorAndTabs();
+            return;
+        }
+
+        const parentId = parentFolderSelect.value === 'root' ? null : parentFolderSelect.value;
+        if (parentId && !findItemById(fileSystem, parentId)) { toast('Папка не существует.', { type: 'error' }); return; }
+        if (nameExists(parentId, name, null)) { toast('Элемент уже существует.', { type: 'error' }); return; }
+
+        const item = { id: genId(), name, type: creatingType, ...(creatingType === 'folder' ? { isOpen: true, children: [] } : { content: '' }) };
+        if (parentId) {
+            const parent = findItemById(fileSystem, parentId);
+            parent.isOpen = true;
+            parent.children.push(item);
+        } else {
+            fileSystem.push(item);
+        }
+
+        if (creatingType === 'file') {
+            activeFileId = item.id;
+            if (!openFileIds.includes(item.id)) openFileIds.push(item.id);
+            closeDrawer();
+        }
+        saveNow(true);
+        closeCreateModal();
+        renderEditorAndTabs();
+    }
+
+    $('confirmCreate').addEventListener('click', handleSaveItem);
+    newItemNameInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') handleSaveItem();
+        if (event.key === 'Escape') closeCreateModal();
+    });
+
+    function deleteItem(id) {
+        const item = findItemById(fileSystem, id);
+        if (!item) return;
+        const snapshot = clone(item);
+        const parent = getParent(fileSystem, id);
+        const parentId = parent ? parent.id : null;
+        const index = siblingsOf(parentId).findIndex((entry) => entry.id === id);
+
+        const result = removeItemById(id);
+        if (!result) return;
+
+        const remaining = getAllFiles(fileSystem);
+        openFileIds = openFileIds.filter((fileId) => remaining.some((file) => file.id === fileId));
+        if (!remaining.some((file) => file.id === activeFileId)) {
+            activeFileId = openFileIds.length ? openFileIds[0] : null;
+        }
+        saveNow(true);
+        renderEditorAndTabs();
+
+        toast(`Удалено: ${snapshot.name}`, {
+            type: 'warn',
+            duration: 7000,
+            action: { label: 'Отменить', onClick: () => {
+                if (insertItem(snapshot, parentId, Math.max(0, index))) {
+                    saveNow(true);
+                    renderEditorAndTabs();
+                    toast('Восстановлено.', { type: 'success' });
+                } else { toast('Папка удалена.', { type: 'error' }); }
+            }},
+        });
+    }
+
+    $('collapseAllBtn').addEventListener('click', () => {
+        const collapse = (items) => {
+            items.forEach((item) => {
+                if (item.type === 'folder') { item.isOpen = false; if (item.children) collapse(item.children); }
+            });
+        };
+        collapse(fileSystem);
+        saveNow();
+        renderTree();
+    });
+
+    $('fileSearch').addEventListener('input', () => renderTree());
+
+    // --- ЖЕСТЫ И КОНТЕКСТНОЕ МЕНЮ ---
+    const fileDrawer = $('fileDrawer');
+    const drawerBackdrop = $('drawerBackdrop');
+    const customContextMenu = $('customContextMenu');
+
+    let gesture = null;
+    const workspaceEl = $('workspace');
+
+    function openDrawer() { fileDrawer.classList.add('open'); drawerBackdrop.classList.add('open'); pushGuard(); }
+    function closeDrawer() { fileDrawer.classList.remove('open'); drawerBackdrop.classList.remove('open'); }
+
+    $('openDrawerBtn').addEventListener('click', openDrawer);
+    $('closeDrawerBtn').addEventListener('click', closeDrawer);
+    drawerBackdrop.addEventListener('click', closeDrawer);
+
+    workspaceEl.addEventListener('touchstart', (event) => {
+        if (event.touches.length !== 1) return;
+        const touch = event.touches[0];
+        const target = event.target;
+        const isOpen = fileDrawer.classList.contains('open');
+
+        if (target.closest('button') || target.closest('input') || target.closest('a')) return;
+
+        const isEditor = target.closest('.CodeMirror') || target.closest('.editor-content') || target.closest('.edge-swipe-area');
+
+        if (!isOpen && isEditor) {
+            gesture = { mode: 'open', startX: touch.clientX, startY: touch.clientY, width: fileDrawer.offsetWidth, locked: false };
+        } else if (isOpen && target.closest('.file-drawer')) {
+            gesture = { mode: 'close', startX: touch.clientX, startY: touch.clientY, width: fileDrawer.offsetWidth, locked: false };
+        }
+        
+        if (gesture) {
+            fileDrawer.style.transition = 'none';
+            drawerBackdrop.style.transition = 'none';
+        }
+    }, { passive: true, capture: true });
+
+    workspaceEl.addEventListener('touchmove', (event) => {
+        if (!gesture) return;
+        const touch = event.touches[0];
+        const deltaX = touch.clientX - gesture.startX;
+        const deltaY = touch.clientY - gesture.startY;
+
+        if (!gesture.locked) {
+            if (Math.abs(deltaX) > Math.abs(deltaY) + 6) gesture.locked = true;
+            else if (Math.abs(deltaY) > Math.abs(deltaX) + 6) {
+                resetDrawerStyle();
+                gesture = null;
+                return;
+            }
+        }
+        if (!gesture.locked) return;
+
+        event.preventDefault(); 
+        
+        if (gesture.mode === 'open' && deltaX > 0) {
+            const move = Math.min(deltaX, gesture.width);
+            fileDrawer.style.transform = `translateX(${-gesture.width + move}px)`;
+            drawerBackdrop.style.opacity = String(move / gesture.width);
+        } else if (gesture.mode === 'close' && deltaX < 0) {
+            const move = Math.min(Math.abs(deltaX), gesture.width);
+            fileDrawer.style.transform = `translateX(${-move}px)`;
+            drawerBackdrop.style.opacity = String(1 - move / gesture.width);
+        }
+    }, { passive: false, capture: true });
+
+    workspaceEl.addEventListener('touchend', (event) => {
+        if (!gesture) return;
+        const { mode, startX, width, locked } = gesture;
+        const deltaX = event.changedTouches[0].clientX - startX;
+        resetDrawerStyle();
+        gesture = null;
+        if (!locked) return;
+        if (mode === 'open') deltaX > width * 0.3 ? openDrawer() : closeDrawer();
+        else deltaX < -(width * 0.3) ? closeDrawer() : openDrawer();
+    }, { capture: true });
+
+    function resetDrawerStyle() {
+        fileDrawer.style.transition = '';
+        drawerBackdrop.style.transition = '';
+        fileDrawer.style.transform = '';
+        drawerBackdrop.style.opacity = '';
+    }
+
+    function showContextMenu(x, y) {
+        customContextMenu.classList.add('open');
+        const rect = customContextMenu.getBoundingClientRect();
+        const left = Math.min(Math.max(10, x), window.innerWidth - rect.width - 10);
+        const top = Math.min(Math.max(10, y), window.innerHeight - rect.height - 10);
+        customContextMenu.style.left = `${left}px`;
+        customContextMenu.style.top = `${top}px`;
+        pushGuard();
+    }
+
+    function hideContextMenu() { customContextMenu.classList.remove('open'); }
+
+    if (cmView) {
+        cmView.getWrapperElement().addEventListener('contextmenu', (event) => {
+            event.preventDefault();
+            showContextMenu(event.clientX, event.clientY);
+        });
+        
+        let longPressTimer = null;
+        let touchMoved = false;
+        let lastTapTime = 0;
+        let lastTapX = 0;
+        let lastTapY = 0;
+
+        cmView.getWrapperElement().addEventListener('touchstart', (event) => {
+            if (event.touches.length !== 1) return;
+            const touch = event.touches[0];
+            const now = Date.now();
+            touchMoved = false;
+            if (now - lastTapTime < 300 && Math.abs(touch.clientX - lastTapX) < 40 && Math.abs(touch.clientY - lastTapY) < 40) {
+                clearTimeout(longPressTimer);
+                lastTapTime = 0;
+                showContextMenu(touch.clientX, touch.clientY);
+                return;
+            }
+            lastTapTime = now;
+            lastTapX = touch.clientX;
+            lastTapY = touch.clientY;
+            clearTimeout(longPressTimer);
+            longPressTimer = setTimeout(() => { if (!touchMoved) showContextMenu(touch.clientX, touch.clientY); }, 650);
+        }, { passive: true });
+
+        cmView.getWrapperElement().addEventListener('touchmove', () => { touchMoved = true; clearTimeout(longPressTimer); }, { passive: true });
+        cmView.getWrapperElement().addEventListener('touchend', () => clearTimeout(longPressTimer));
+    }
+
+    window.addEventListener('pointerdown', (event) => { if (!customContextMenu.contains(event.target)) hideContextMenu(); });
+
+    $('ctxSelectAll').addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        if (!cmView) return;
+        cmView.execCommand("selectAll");
+        cmView.focus();
+        hideContextMenu();
+    });
+
+    $('ctxCut').addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        if (!cmView) return;
+        const text = cmView.getSelection();
+        if (text) {
+            navigator.clipboard.writeText(text).catch(() => {});
+            cmView.replaceSelection("");
+        }
+        hideContextMenu();
+    });
+
+    $('ctxCopy').addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        if (!cmView) return;
+        const text = cmView.getSelection() || cmView.getValue();
+        navigator.clipboard.writeText(text).catch(() => {});
+        hideContextMenu();
+    });
+
+    $('ctxPaste').addEventListener('pointerdown', async (event) => {
+        event.preventDefault();
+        hideContextMenu();
+        try {
+            if (!navigator.clipboard || !navigator.clipboard.readText) throw new Error('Буфер обмена недоступен');
+            const text = await navigator.clipboard.readText();
+            if (cmView) {
+                cmView.replaceSelection(text);
+            }
+        } catch (error) {
+            toast('Вставка недоступна.', { type: 'warn' });
+        }
+    });
+
+    $('ctxClear').addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        if (cmView) {
+            cmView.setValue("");
+        }
+        hideContextMenu();
+    });
+
+    $('undoBtn').addEventListener('click', () => { if (cmView) { cmView.undo(); cmView.focus(); } });
+    $('redoBtn').addEventListener('click', () => { if (cmView) { cmView.redo(); cmView.focus(); } });
+
+    $('symbolBar').addEventListener('click', (event) => {
+        const button = event.target.closest('.sym-btn');
+        if (!button || !cmView) return;
+        const sym = button.dataset.sym;
+        cmView.replaceSelection(sym);
+        cmView.focus();
+    });
+
+    let guardPushed = false;
+
+    function pushGuard() {
+        if (guardPushed) return;
+        guardPushed = true;
+        window.history.pushState({ codedock: true }, '');
+    }
+
+    function closeTopPanel() {
+        if (customContextMenu.classList.contains('open')) { hideContextMenu(); return true; }
+        if ($('confirmModal').classList.contains('open')) { $('confirmModal').classList.remove('open'); return true; }
+        if (createModal.classList.contains('open')) { closeCreateModal(); return true; }
+        if (settingsModal.classList.contains('open')) { settingsModal.classList.remove('open'); return true; }
+        if ($('previewOverlay').classList.contains('open')) { $('previewOverlay').classList.remove('open'); return true; }
+        if (consolePanel.panel.classList.contains('open')) { consolePanel.close(); return true; }
+        if (fileDrawer.classList.contains('open')) { closeDrawer(); return true; }
+        if (searchPanel.classList.contains('open')) { closeSearch(); return true; }
+        return false;
+    }
+
+    window.history.pushState({ codedock: true }, '');
+    guardPushed = true;
+
+    window.addEventListener('popstate', () => {
+        guardPushed = false;
+        if (closeTopPanel()) pushGuard();
+    });
+
+    $('resetCacheBtn').addEventListener('click', async () => {
+        const ok = await confirmAction('Очистить кэш?', 'Приложение загрузит свежую версию. Файлы проекта сохранятся.');
+        if (!ok) return;
+        try {
+            if ('caches' in window) {
+                const names = await caches.keys();
+                await Promise.all(names.map((name) => caches.delete(name)));
+            }
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(registrations.map((registration) => registration.unregister()));
+            }
+            const url = new URL(window.location.href);
+            url.searchParams.set('nocache', String(Date.now()));
+            window.location.replace(url.toString());
+        } catch (error) {
+            toast(`Ошибка сброса кэша: ${error.message}`, { type: 'error' });
+        }
+    });
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', async () => {
+            try {
+                await navigator.serviceWorker.register('sw.js');
+            } catch (error) {
+                console.warn('Ошибка регистрации Service Worker:', error.message);
+            }
+        });
+    }
+
+    function renderAll() { renderEditorAndTabs(); }
+
+    createEditor();
+    loadUiSettings();
+    loadProject();
+    renderAll();
+    saveNow(true);
+    setSaveStatus('saved', '<i class="fa-solid fa-check"></i> Готово');
+
+    window.__codedock = { version: APP_VERSION, getFileSystem: () => fileSystem, loadProject };
+</script>
+</body>
+</html>
