@@ -277,7 +277,7 @@
         .cm-scroller::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
         .cm-scroller::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-        /* Подсветка синтаксиса (One Dark / Кастом) */
+        /* Подсветка синтаксиса (Кастомная) */
         .cm-editor .cm-keyword { color: #c678dd; }
         .cm-editor .cm-operator { color: #56b6c2; }
         .cm-editor .cm-variableName { color: #e5c07b; }
@@ -867,7 +867,12 @@
         <div class="editor-content">
             <div class="line-numbers" id="lineNumbers" aria-hidden="true"></div>
             <!-- Контейнер для CodeMirror -->
-            <div id="codeEditor"></div>
+            <div id="codeEditor">
+                <!-- Фолбэк на случай ошибки загрузки CDN -->
+                <div id="fallbackEditor" style="display: none; padding: 14px; color: var(--danger); font-size: 14px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Не удалось загрузить редактор. Проверьте подключение к интернету.
+                </div>
+            </div>
             <div class="edge-swipe-area" id="edgeSwipeArea"></div>
         </div>
 
@@ -1037,19 +1042,21 @@
 <input type="file" id="importFile" accept=".json,application/json" class="hidden-file-input">
 
 <script type="module">
-    import { EditorState, Compartment } from 'https://cdn.jsdelivr.net/npm/@codemirror/state@6.4.1/+esm';
-    import { EditorView, keymap, lineNumbers, highlightActiveLineGutter, drawSelection, highlightSpecialChars, rectangularSelection, crosshairCursor, dropCursor, highlightActiveLine } from 'https://cdn.jsdelivr.net/npm/@codemirror/view@6.26.3/+esm';
-    import { defaultKeymap, history, historyKeymap, indentWithTab } from 'https://cdn.jsdelivr.net/npm/@codemirror/commands@6.3.3/+esm';
-    import { searchKeymap, highlightSelectionMatches } from 'https://cdn.jsdelivr.net/npm/@codemirror/search@6.5.6/+esm';
-    import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from 'https://cdn.jsdelivr.net/npm/@codemirror/autocomplete@6.15.0/+esm';
-    import { foldGutter, foldKeymap, indentOnInput, syntaxHighlighting, defaultHighlightStyle, bracketMatching } from 'https://cdn.jsdelivr.net/npm/@codemirror/language@6.10.1/+esm';
-    import { lintKeymap } from 'https://cdn.jsdelivr.net/npm/@codemirror/lint@6.5.0/+esm';
+    // ВСЕ ИМПОРТЫ СТРОГО В НАЧАЛЕ
+    import { EditorState, Compartment } from 'https://esm.sh/@codemirror/state@6.4.1';
+    import { EditorView, keymap, lineNumbers, highlightActiveLineGutter, drawSelection, highlightSpecialChars, rectangularSelection, crosshairCursor, dropCursor, highlightActiveLine } from 'https://esm.sh/@codemirror/view@6.26.3';
+    import { defaultKeymap, history, historyKeymap, indentWithTab } from 'https://esm.sh/@codemirror/commands@6.3.3';
+    import { searchKeymap, highlightSelectionMatches } from 'https://esm.sh/@codemirror/search@6.5.6';
+    import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from 'https://esm.sh/@codemirror/autocomplete@6.15.0';
+    import { foldGutter, foldKeymap, indentOnInput, syntaxHighlighting, bracketMatching, HighlightStyle } from 'https://esm.sh/@codemirror/language@6.10.1';
+    import { tags } from 'https://esm.sh/@lezer/highlight@1.2.0';
+    import { lintKeymap } from 'https://esm.sh/@codemirror/lint@6.5.0';
     
     // Языки
-    import { html } from 'https://cdn.jsdelivr.net/npm/@codemirror/lang-html@6.4.9/+esm';
-    import { css } from 'https://cdn.jsdelivr.net/npm/@codemirror/lang-css@6.2.1/+esm';
-    import { javascript } from 'https://cdn.jsdelivr.net/npm/@codemirror/lang-javascript@6.2.2/+esm';
-    import { json } from 'https://cdn.jsdelivr.net/npm/@codemirror/lang-json@6.0.1/+esm';
+    import { html } from 'https://esm.sh/@codemirror/lang-html@6.4.9';
+    import { css } from 'https://esm.sh/@codemirror/lang-css@6.2.1';
+    import { javascript } from 'https://esm.sh/@codemirror/lang-javascript@6.2.2';
+    import { json } from 'https://esm.sh/@codemirror/lang-json@6.0.1';
 
     'use strict';
 
@@ -1064,7 +1071,6 @@
     };
     const MAX_TABS = 12;
     const SAVE_DEBOUNCE = 500;
-    const HISTORY_LIMIT = 100;
 
     const $ = (id) => document.getElementById(id);
 
@@ -1090,13 +1096,11 @@
 
     // --- CODE MIRROR ИНТЕГРАЦИЯ ---
 
-    // Компартменты для динамического изменения настроек
     const languageConf = new Compartment();
     const themeConf = new Compartment();
     const wrapConf = new Compartment();
     const tabSizeConf = new Compartment();
 
-    // Кастомная тема
     const darkTheme = EditorView.theme({
         "&": { backgroundColor: "transparent", color: "#e5e7eb", height: "100%" },
         ".cm-content": { caretColor: "#8b5cf6" },
@@ -1114,10 +1118,6 @@
         ".cm-searchMatch": { backgroundColor: "rgba(250, 204, 21, 0.3)", outline: "1px solid rgba(250, 204, 21, 0.5)" },
         ".cm-searchMatch.cm-searchMatch-selected": { backgroundColor: "rgba(139, 92, 246, 0.5)" }
     }, { dark: true });
-
-    // Кастомная подсветка синтаксиса
-    import { HighlightStyle } from 'https://cdn.jsdelivr.net/npm/@codemirror/language@6.10.1/+esm';
-    import { tags } from 'https://cdn.jsdelivr.net/npm/@lezer/highlight@1.2.0/+esm';
 
     const customHighlightStyle = HighlightStyle.define([
         { tag: tags.keyword, color: '#c678dd' },
@@ -1141,59 +1141,65 @@
     let cmView = null;
 
     function createEditor() {
-        const startState = EditorState.create({
-            doc: '',
-            extensions: [
-                lineNumbers(),
-                highlightActiveLineGutter(),
-                highlightSpecialChars(),
-                history(),
-                foldGutter(),
-                drawSelection(),
-                dropCursor(),
-                EditorState.allowMultipleSelections.of(true),
-                indentOnInput(),
-                syntaxHighlighting(customHighlightStyle),
-                bracketMatching(),
-                closeBrackets(),
-                autocompletion(),
-                rectangularSelection(),
-                crosshairCursor(),
-                highlightActiveLine(),
-                highlightSelectionMatches(),
-                keymap.of([
-                    ...closeBracketsKeymap,
-                    ...defaultKeymap,
-                    ...searchKeymap,
-                    ...historyKeymap,
-                    ...foldKeymap,
-                    ...completionKeymap,
-                    ...lintKeymap,
-                    indentWithTab
-                ]),
-                languageConf.of([]),
-                themeConf.of(darkTheme),
-                wrapConf.of([]),
-                tabSizeConf.of(EditorState.tabSize.of(2)),
-                EditorView.updateListener.of((update) => {
-                    if (update.docChanged) {
-                        const file = findItemById(fileSystem, activeFileId);
-                        if (file) file.content = update.state.doc.toString();
-                        scheduleSave();
-                        updateLineNumbers();
-                        refreshSearchResults();
-                    }
-                    if (update.selectionSet) {
-                        updateActiveLineNumber();
-                    }
-                })
-            ]
-        });
+        try {
+            const startState = EditorState.create({
+                doc: '',
+                extensions: [
+                    lineNumbers(),
+                    highlightActiveLineGutter(),
+                    highlightSpecialChars(),
+                    history(),
+                    foldGutter(),
+                    drawSelection(),
+                    dropCursor(),
+                    EditorState.allowMultipleSelections.of(true),
+                    indentOnInput(),
+                    syntaxHighlighting(customHighlightStyle),
+                    bracketMatching(),
+                    closeBrackets(),
+                    autocompletion(),
+                    rectangularSelection(),
+                    crosshairCursor(),
+                    highlightActiveLine(),
+                    highlightSelectionMatches(),
+                    keymap.of([
+                        ...closeBracketsKeymap,
+                        ...defaultKeymap,
+                        ...searchKeymap,
+                        ...historyKeymap,
+                        ...foldKeymap,
+                        ...completionKeymap,
+                        ...lintKeymap,
+                        indentWithTab
+                    ]),
+                    languageConf.of([]),
+                    themeConf.of(darkTheme),
+                    wrapConf.of([]),
+                    tabSizeConf.of(EditorState.tabSize.of(2)),
+                    EditorView.updateListener.of((update) => {
+                        if (update.docChanged) {
+                            const file = findItemById(fileSystem, activeFileId);
+                            if (file) file.content = update.state.doc.toString();
+                            scheduleSave();
+                            updateLineNumbers();
+                            refreshSearchResults();
+                        }
+                        if (update.selectionSet) {
+                            updateActiveLineNumber();
+                        }
+                    })
+                ]
+            });
 
-        cmView = new EditorView({
-            state: startState,
-            parent: $('codeEditor')
-        });
+            cmView = new EditorView({
+                state: startState,
+                parent: $('codeEditor')
+            });
+        } catch (error) {
+            console.error("CodeMirror failed to load:", error);
+            $('fallbackEditor').style.display = 'block';
+            toast('Ошибка инициализации редактора.', { type: 'error' });
+        }
     }
 
     function getLanguageExtension(fileName) {
@@ -1599,7 +1605,7 @@
     function closeSearch() {
         if (!searchPanel.classList.contains('open')) return;
         searchPanel.classList.remove('open');
-        cmView.focus();
+        if (cmView) cmView.focus();
     }
 
     function computeMatches() {
@@ -1622,7 +1628,7 @@
         searchMatches = computeMatches();
         if (!searchMatches.length) { searchIndex = -1; searchCount.textContent = '0/0'; return; }
         if (searchIndex < 0 || searchIndex >= searchMatches.length) {
-            const caret = cmView.state.selection.main.head;
+            const caret = cmView ? cmView.state.selection.main.head : 0;
             const next = searchMatches.findIndex((match) => match.start >= caret);
             searchIndex = next === -1 ? 0 : next;
         }
@@ -1630,7 +1636,7 @@
     }
 
     function goToMatch(index) {
-        if (!searchMatches.length) return;
+        if (!searchMatches.length || !cmView) return;
         searchIndex = (index + searchMatches.length) % searchMatches.length;
         const match = searchMatches[searchIndex];
         cmView.focus();
@@ -1643,7 +1649,7 @@
     }
 
     function replaceCurrent() {
-        if (!searchMatches.length || searchIndex < 0) return;
+        if (!searchMatches.length || searchIndex < 0 || !cmView) return;
         const match = searchMatches[searchIndex];
         const replacement = replaceInput.value;
         cmView.dispatch({
@@ -2405,12 +2411,6 @@
         drawerBackdrop.style.opacity = '';
     }
 
-    let longPressTimer = null;
-    let touchMoved = false;
-    let lastTapTime = 0;
-    let lastTapX = 0;
-    let lastTapY = 0;
-
     function showContextMenu(x, y) {
         customContextMenu.classList.add('open');
         const rect = customContextMenu.getBoundingClientRect();
@@ -2430,6 +2430,12 @@
             showContextMenu(event.clientX, event.clientY);
         });
         
+        let longPressTimer = null;
+        let touchMoved = false;
+        let lastTapTime = 0;
+        let lastTapX = 0;
+        let lastTapY = 0;
+
         cmView.dom.addEventListener('touchstart', (event) => {
             if (event.touches.length !== 1) return;
             const touch = event.touches[0];
@@ -2468,7 +2474,7 @@
         const { from, to } = cmView.state.selection.main;
         const text = cmView.state.sliceDoc(from, to);
         if (text) {
-            safeCopy(text);
+            navigator.clipboard.writeText(text).catch(() => {});
             cmView.dispatch({ changes: { from, to, insert: '' } });
         }
         hideContextMenu();
@@ -2479,7 +2485,7 @@
         if (!cmView) return;
         const { from, to } = cmView.state.selection.main;
         const text = cmView.state.sliceDoc(from, to) || cmView.state.doc.toString();
-        safeCopy(text);
+        navigator.clipboard.writeText(text).catch(() => {});
         hideContextMenu();
     });
 
@@ -2506,8 +2512,6 @@
     });
 
     // --- КНОПКИ ИНСТРУМЕНТОВ ---
-    $('undoBtn').addEventListener('click', () => { if (cmView) cmView.dispatch({ effects: [] }); });
-    // CodeMirror сам обрабатывает undo/redo через historyKeymap, кнопки просто для вида
     $('undoBtn').addEventListener('click', () => { if (cmView) cmView.focus(); });
     $('redoBtn').addEventListener('click', () => { if (cmView) cmView.focus(); });
 
