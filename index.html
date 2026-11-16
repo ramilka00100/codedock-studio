@@ -565,20 +565,20 @@
             background: #fff;
         }
 
-        /* --- КОНСОЛЬ (UI) --- */
+        /* --- КОНСОЛЬ --- */
         .console-panel {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            height: 40%;
+            height: 40%; /* Занимает 40% экрана */
             background-color: var(--bg-panel);
             border-top: 1px solid var(--border);
             display: flex;
             flex-direction: column;
             transform: translateY(100%);
             transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
-            z-index: 35;
+            z-index: 35; /* Ниже файлового меню (30), но выше редактора */
             box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
         }
 
@@ -644,6 +644,7 @@
         .console-line.info { color: var(--info); }
         .console-line.warn { color: var(--warn); background: rgba(250, 204, 21, 0.1); }
         .console-line.error { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+        /* ------------------- */
 
         .custom-context-menu {
             position: fixed;
@@ -970,105 +971,6 @@
 </div>
 
 <script>
-    // --- КЛАСС КОНСОЛИ ---
-    const CONSOLE_INJECT_SCRIPT = `
-        (function() {
-            const sendToParent = (type, args) => {
-                try {
-                    const serializedArgs = Array.from(args).map(arg => {
-                        if (typeof arg === 'object' && arg !== null) {
-                            try { return JSON.stringify(arg); } catch(e) { return String(arg); }
-                        }
-                        return String(arg);
-                    });
-                    window.parent.postMessage({ type: 'codedock-console', logType: type, message: serializedArgs.join(' ') }, '*');
-                } catch(e) {}
-            };
-            console.log = (...args) => sendToParent('log', args);
-            console.info = (...args) => sendToParent('info', args);
-            console.warn = (...args) => sendToParent('warn', args);
-            console.error = (...args) => sendToParent('error', args);
-            window.onerror = function(message, source, lineno, colno, error) {
-                sendToParent('error', [message + ' (строка ' + lineno + ')']);
-            };
-        })();
-    `;
-
-    class CodeDockConsole {
-        constructor(panelId, outputId, btnId, closeBtnId, clearBtnId) {
-            this.panel = document.getElementById(panelId);
-            this.output = document.getElementById(outputId);
-            this.btn = document.getElementById(btnId);
-            this.closeBtn = document.getElementById(closeBtnId);
-            this.clearBtn = document.getElementById(clearBtnId);
-
-            this.init();
-        }
-
-        init() {
-            this.btn.addEventListener('click', () => this.toggle());
-            this.closeBtn.addEventListener('click', () => this.close());
-            this.clearBtn.addEventListener('click', () => this.clear());
-
-            window.addEventListener('message', (e) => {
-                if (!e.data || e.data.type !== 'codedock-console') return;
-                this.log(e.data.logType, e.data.message);
-            });
-        }
-
-        toggle() {
-            this.panel.classList.toggle('open');
-            if (this.panel.classList.contains('open')) {
-                setTimeout(() => { this.output.scrollTop = this.output.scrollHeight; }, 300);
-            }
-        }
-
-        open() {
-            this.panel.classList.add('open');
-            setTimeout(() => { this.output.scrollTop = this.output.scrollHeight; }, 300);
-        }
-
-        close() {
-            this.panel.classList.remove('open');
-        }
-
-        clear() {
-            this.output.innerHTML = '';
-        }
-
-        log(type, message) {
-            const line = document.createElement('div');
-            line.className = `console-line ${type}`;
-            
-            let icon = 'fa-angle-right';
-            if (type === 'error') icon = 'fa-circle-exclamation';
-            if (type === 'warn') icon = 'fa-triangle-exclamation';
-            if (type === 'info') icon = 'fa-circle-info';
-
-            // Экранирование HTML
-            const safeMsg = String(message).replace(/[&<>"']/g, c => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-            }[c]));
-
-            line.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${safeMsg}</span>`;
-            this.output.appendChild(line);
-            
-            if (this.panel.classList.contains('open')) {
-                this.output.scrollTop = this.output.scrollHeight;
-            }
-        }
-    }
-    // ----------------------
-
-    // Инициализация консоли
-    const consolePanel = new CodeDockConsole(
-        'consolePanel', 
-        'consoleOutput', 
-        'consoleBtn', 
-        'closeConsoleBtn', 
-        'clearConsoleBtn'
-    );
-
     // Регистрация Service Worker
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -1076,7 +978,7 @@
         });
     }
 
-    // Очистка кэша
+    // Очистка кэша по клику на логотип
     document.getElementById('resetCacheBtn').addEventListener('click', async () => {
         const confirmReset = confirm('Очистить кэш и обновить приложение?');
         if (!confirmReset) return;
@@ -1160,6 +1062,8 @@
     const parentFolderField = document.getElementById('parentFolderField');
 
     const customContextMenu = document.getElementById('customContextMenu');
+    const consolePanel = document.getElementById('consolePanel');
+    const consoleOutput = document.getElementById('consoleOutput');
 
     function escapeHtml(str) {
         return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1338,6 +1242,7 @@
         }
     });
 
+    // --- Кнопки Undo / Redo ---
     document.getElementById('undoBtn').addEventListener('click', () => {
         if (codeEditor.disabled) return;
         codeEditor.focus();
@@ -1352,6 +1257,7 @@
         codeEditor.dispatchEvent(new Event('input'));
     });
 
+    // --- Кнопка Сохранить ---
     const saveBtn = document.getElementById('saveProjectBtn');
     const originalSaveHTML = saveBtn.innerHTML;
     saveBtn.addEventListener('click', () => {
@@ -1368,6 +1274,48 @@
         }, 1500);
     });
 
+    // --- КОНСОЛЬ ---
+    document.getElementById('consoleBtn').addEventListener('click', () => {
+        consolePanel.classList.toggle('open');
+        // Если открываем, прокручиваем вниз
+        if (consolePanel.classList.contains('open')) {
+            setTimeout(() => { consoleOutput.scrollTop = consoleOutput.scrollHeight; }, 300);
+        }
+    });
+
+    document.getElementById('closeConsoleBtn').addEventListener('click', () => {
+        consolePanel.classList.remove('open');
+    });
+
+    document.getElementById('clearConsoleBtn').addEventListener('click', () => {
+        consoleOutput.innerHTML = '';
+    });
+
+    window.addEventListener('message', (e) => {
+        // Проверяем, что это наше сообщение
+        if (!e.data || e.data.type !== 'codedock-console') return;
+        
+        const { logType, message } = e.data;
+        
+        const line = document.createElement('div');
+        line.className = `console-line ${logType}`;
+        
+        let icon = 'fa-angle-right';
+        if (logType === 'error') icon = 'fa-circle-exclamation';
+        if (logType === 'warn') icon = 'fa-triangle-exclamation';
+        if (logType === 'info') icon = 'fa-circle-info';
+
+        line.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${escapeHtml(message)}</span>`;
+        consoleOutput.appendChild(line);
+        
+        // Автопрокрутка
+        if (consolePanel.classList.contains('open')) {
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+    });
+    // -----------------
+
+    // --- Свайп-логика ---
     let touchStartX = 0;
     let touchStartY = 0;
     let isDraggingDrawer = false;
@@ -1467,6 +1415,7 @@
         drawerBackdrop.style.opacity = '';
     }
 
+    // --- Контекстное меню ---
     let longPressTimer = null;
     let touchMoved = false;
     let lastTapTime = 0;
@@ -1652,6 +1601,7 @@
     closeDrawerBtn.onclick = closeDrawer;
     drawerBackdrop.onclick = closeDrawer;
 
+    // --- ЗАПУСК И ИНЪЕКЦИЯ КОНСОЛИ ---
     document.getElementById('runProjectBtn').onclick = () => {
         const allFiles = getAllFiles(fileSystem);
         const htmlFile = allFiles.find(f => f.name.toLowerCase() === 'index.html')
@@ -1673,9 +1623,32 @@
             doc.querySelectorAll('script[src]').forEach(el => el.remove());
             if (!doc.head) doc.documentElement.insertBefore(doc.createElement('head'), doc.body || null);
 
-            // Внедряем скрипт консоли
+            // Скрипт для перехвата консоли
+            const consoleOverride = `
+                (function() {
+                    const originalLog = console.log;
+                    const sendToParent = (type, args) => {
+                        try {
+                            const serializedArgs = Array.from(args).map(arg => {
+                                if (typeof arg === 'object' && arg !== null) {
+                                    try { return JSON.stringify(arg); } catch(e) { return String(arg); }
+                                }
+                                return String(arg);
+                            });
+                            window.parent.postMessage({ type: 'codedock-console', logType: type, message: serializedArgs.join(' ') }, '*');
+                        } catch(e) {}
+                    };
+                    console.log = (...args) => sendToParent('log', args);
+                    console.info = (...args) => sendToParent('info', args);
+                    console.warn = (...args) => sendToParent('warn', args);
+                    console.error = (...args) => sendToParent('error', args);
+                    window.onerror = function(message, source, lineno, colno, error) {
+                        sendToParent('error', [message + ' (строка ' + lineno + ')']);
+                    };
+                })();
+            `;
             const script = doc.createElement('script');
-            script.textContent = CONSOLE_INJECT_SCRIPT;
+            script.textContent = consoleOverride;
             doc.head.insertBefore(script, doc.head.firstChild);
 
             cssFiles.forEach(f => {
@@ -1691,15 +1664,20 @@
             html = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
         }
 
-        consolePanel.clear();
+        // Очищаем консоль перед новым запуском
+        consoleOutput.innerHTML = '';
         
         document.getElementById('previewFrame').srcdoc = html;
         document.getElementById('previewOverlay').classList.add('open');
+        
+        // Автоматически открываем консоль при запуске (опционально)
+        // consolePanel.classList.add('open');
     };
 
     document.getElementById('closePreviewBtn').onclick = () => {
         document.getElementById('previewOverlay').classList.remove('open');
     };
+    // ---------------------------------
 
     function populateFolderSelect(selectedId = 'root') {
         parentFolderSelect.innerHTML = '<option value="root">/ (Корень проекта)</option>';
