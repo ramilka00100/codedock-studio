@@ -62,7 +62,6 @@
         .workspace {
             position: relative;
             width: 100%;
-            /* УДАЛЕНО: max-width: 480px; */
             height: 100%;
             background-color: var(--bg-main);
             display: flex;
@@ -213,18 +212,21 @@
         .btn-run { background-color: var(--accent); color: #fff; box-shadow: 0 2px 8px var(--accent-glow); }
 
         /* --- КОНТЕЙНЕР РЕДАКТОРА --- */
-        .editor-content { flex: 1; display: flex; position: relative; overflow: hidden; }
+        .editor-content { flex: 1; display: flex; position: relative; overflow: hidden; width: 100%; }
 
         #codeEditor {
             flex: 1;
             height: 100%;
+            width: 100%;
             position: relative;
             z-index: 2;
         }
 
         /* Переопределение стилей CodeMirror 5 */
         .CodeMirror {
-            height: 100%;
+            height: 100% !important;
+            width: 100% !important; /* Жестко задаем ширину */
+            flex: 1 !important;     /* Заставляем растягиваться во флекс-контейнере */
             font-family: var(--editor-font-family);
             font-size: var(--editor-font-size);
             background-color: var(--bg-main);
@@ -1056,6 +1058,9 @@
                 styleActiveLine: true
             });
 
+            // Принудительно задаем размер на 100% ширины и высоты
+            cmView.setSize("100%", "100%");
+
             // Синхронизация изменений с моделью
             cmView.on("change", () => {
                 const file = findItemById(fileSystem, activeFileId);
@@ -1067,6 +1072,11 @@
             
             // Принудительный рендер (чтобы не было пустого экрана при загрузке)
             setTimeout(() => { cmView.refresh(); }, 100);
+
+            // Обновление редактора при изменении размера окна
+            window.addEventListener('resize', () => {
+                if (cmView) cmView.refresh();
+            });
         } catch (error) {
             console.error("CodeMirror failed to load:", error);
             $('codeEditor').style.display = 'block';
