@@ -58,13 +58,31 @@
             padding: 8px 14px;
             background-color: var(--bg-panel);
             border-bottom: 1px solid var(--border);
+            /* Поднимаем шапку над выезжающим меню и затемнением */
+            position: relative;
+            z-index: 50; 
+        }
+
+        .logo-btn {
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: transform 0.1s, opacity 0.1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .logo-btn:active {
+            transform: scale(0.95);
+            opacity: 0.8;
         }
 
         .brand-logo {
-            height: 38px;
+            height: 56px; /* Увеличенный размер */
             width: auto;
             object-fit: contain;
-            /* Убраны фильтры, так как фон прозрачный */
         }
         /* -------------------------- */
 
@@ -633,10 +651,12 @@
 <body>
 
 <div class="workspace">
-    <!-- Шапка с логотипом -->
+    <!-- Шапка с логотипом (z-index выше, чем у меню) -->
     <div class="brand-header">
-        <!-- Убедитесь, что картинка называется logo.png и лежит в одной папке с html -->
-        <img src="logo.png" alt="CodeDock Studio" class="brand-logo" onerror="this.style.display='none'">
+        <button class="logo-btn" id="resetCacheBtn" title="Сбросить кэш (Service Worker)">
+            <!-- Убедитесь, что картинка называется logo.png и лежит в одной папке с html -->
+            <img src="logo.png" alt="CodeDock Studio" class="brand-logo" onerror="this.style.display='none'">
+        </button>
     </div>
 
     <header class="editor-topbar">
@@ -748,6 +768,36 @@
 </div>
 
 <script>
+    // --- Логика сброса кэша (Service Worker) ---
+    document.getElementById('resetCacheBtn').addEventListener('click', async () => {
+        const confirmReset = confirm('Очистить кэш приложения и перезагрузить? Это полезно, если вы обновили код, а он не применяется.');
+        if (!confirmReset) return;
+
+        try {
+            // 1. Очищаем кэш (Cache API)
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                await Promise.all(cacheNames.map(name => caches.delete(name)));
+            }
+            
+            // 2. Отменяем регистрацию Service Worker
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (let registration of registrations) {
+                    await registration.unregister();
+                }
+            }
+            
+            alert('Кэш успешно сброшен. Перезагрузка...');
+            // 3. Перезагружаем страницу
+            window.location.reload();
+        } catch (e) {
+            console.error('Ошибка сброса кэша:', e);
+            alert('Ошибка при сбросе кэша: ' + e.message);
+        }
+    });
+    // ------------------------------------------
+
     const DEFAULT_PROJECT = [
         {
             id: '1',
