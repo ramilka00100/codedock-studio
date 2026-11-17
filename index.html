@@ -3011,7 +3011,18 @@
         setSaveStatus('saved', '<i class="fa-solid fa-check"></i> Готово');
     })();
 
+    window.__consolePanel = consolePanel;
     window.__codedock = { version: APP_VERSION, getFileSystem: () => fileSystem, loadProject };
 </script>
+    <!-- Основной скрипт CodeDock (уже есть) -->
+    <script>
+        'use strict';
+        // ... весь ваш основной код ...
+    </script>
+
+    <!-- Error Logger — подключаем ПОСЛЕ основного скрипта -->
+    <script src="error-logger.js"></script>
+</body>
+</html>
 </body>
 </html>
