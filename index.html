@@ -20,6 +20,7 @@
     <!-- CodeMirror 5 CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/eclipse.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
     
     <style>
         :root {
@@ -39,6 +40,25 @@
             --warn: #f59e0b;
             --editor-font-size: 13px;
             --editor-font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-main: #121212;
+            --bg-panel: #1e1e1e;
+            --bg-card: #2c2c2c;
+            --bg-hover: #3a3a3a;
+            --accent: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --accent-glow: rgba(56, 189, 248, 0.25);
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --danger: #f87171;
+            --success: #34d399;
+            --info: #22d3ee;
+            --warn: #fbbf24;
+            --shadow: 0 2px 8px rgba(0,0,0,0.5);
         }
 
         * {
@@ -50,13 +70,14 @@
         }
 
         body {
-            background-color: #e2e8f0;
+            background-color: var(--bg-panel);
             color: var(--text-main);
             display: flex;
             justify-content: center;
             height: 100vh;
             height: 100dvh;
             overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         .workspace {
@@ -862,9 +883,44 @@
             width: 1px;
             height: 1px;
         }
+
+        /* Theme toggle */
+        .theme-toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+        .toggle-switch {
+            width: 48px;
+            height: 28px;
+            background: var(--border);
+            border-radius: 14px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+            flex-shrink: 0;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 24px;
+            height: 24px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .toggle-switch.active { background: var(--accent); }
+        .toggle-switch.active::after { transform: translateX(20px); }
     </style>
 </head>
-<body>
+<body data-theme="light">
 
 <div class="workspace" id="workspace">
     <div class="brand-header">
@@ -907,6 +963,9 @@
                 </button>
                 <button class="btn-action btn-icon" id="saveProjectBtn" title="Сохранить" aria-label="Сохранить">
                     <i class="fa-solid fa-floppy-disk"></i>
+                </button>
+                <button class="btn-action btn-icon" id="btnDots" title="Ещё" aria-label="Ещё" style="margin-left:auto;">
+                    <i class="fa-solid fa-ellipsis-vertical"></i>
                 </button>
             </div>
         </div>
@@ -1050,9 +1109,16 @@
     </div>
 </div>
 
+<!-- Настройки с темой -->
 <div class="modal-overlay" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
     <div class="modal-card">
         <h3 id="settingsTitle" style="font-size:1.05rem;">Настройки</h3>
+        
+        <div class="theme-toggle-row">
+            <span style="font-size:0.92rem;font-weight:500;">Тёмная тема</span>
+            <div class="toggle-switch" id="themeToggle" role="switch" aria-checked="false" tabindex="0"></div>
+        </div>
+
         <div class="modal-field">
             <label for="fontSizeSelect">Размер шрифта</label>
             <select id="fontSizeSelect">
@@ -1084,6 +1150,7 @@
     </div>
 </div>
 
+<!-- Модалка экспорта с импортом -->
 <div class="modal-overlay" id="exportModal" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
     <div class="modal-card">
         <h3 id="exportTitle" style="font-size:1.05rem;">
@@ -1114,6 +1181,13 @@
                     <span>Telegram, почта, облако</span>
                 </div>
             </button>
+            <button type="button" class="export-option" data-export-action="import-zip">
+                <div class="export-option-icon" style="background:rgba(16,185,129,0.15);color:var(--success);"><i class="fa-solid fa-file-arrow-up"></i></div>
+                <div class="export-option-text">
+                    <strong>Импорт ZIP</strong>
+                    <span>Загрузить проект из архива</span>
+                </div>
+            </button>
         </div>
         <div class="modal-actions">
             <button type="button" class="btn-secondary" id="closeExportModal">Отмена</button>
@@ -1134,6 +1208,7 @@
 
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 <input type="file" id="importFile" accept=".json,application/json" class="hidden-file-input">
+<input type="file" id="importZipFile" accept=".zip,application/zip" class="hidden-file-input">
 
 <!-- CodeMirror 5 JavaScript -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
@@ -1145,11 +1220,13 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+<!-- JSZip -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <script>
     'use strict';
 
-    const APP_VERSION = '3.0.0';
+    const APP_VERSION = '3.1.0';
     const STORAGE = {
         current: 'codedock_v3',
         backup: 'codedock_v3_backup',
@@ -1157,6 +1234,7 @@
         legacyActive: 'codedock_active_v2',
         legacyTabs: 'codedock_open_tabs',
         ui: 'codedock_ui_v3',
+        theme: 'codedock_theme',
     };
     const MAX_TABS = 12;
     const SAVE_DEBOUNCE = 500;
@@ -1185,6 +1263,80 @@
 
     let cmView = null;
 
+    // ============================================
+    // OPFS (Origin Private File System)
+    // ============================================
+    let opfsRoot = null;
+    const OPFS_STATE_FILE = 'codedock_state.json';
+
+    async function initOPFS() {
+        try {
+            if (navigator.storage && navigator.storage.getDirectory) {
+                opfsRoot = await navigator.storage.getDirectory();
+                console.log('OPFS initialized');
+            }
+        } catch (e) {
+            console.warn('OPFS not available, using localStorage only', e);
+            opfsRoot = null;
+        }
+    }
+
+    async function saveToOPFS(data) {
+        if (!opfsRoot) return false;
+        try {
+            const fileHandle = await opfsRoot.getFileHandle(OPFS_STATE_FILE, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(JSON.stringify(data));
+            await writable.close();
+            return true;
+        } catch (e) {
+            console.error('OPFS save error:', e);
+            return false;
+        }
+    }
+
+    async function loadFromOPFS() {
+        if (!opfsRoot) return null;
+        try {
+            const fileHandle = await opfsRoot.getFileHandle(OPFS_STATE_FILE);
+            const file = await fileHandle.getFile();
+            const text = await file.text();
+            return JSON.parse(text);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // ============================================
+    // ТЕМА
+    // ============================================
+    function applyTheme(theme) {
+        document.body.dataset.theme = theme;
+        const toggle = $('themeToggle');
+        if (toggle) {
+            toggle.classList.toggle('active', theme === 'dark');
+            toggle.setAttribute('aria-checked', theme === 'dark' ? 'true' : 'false');
+        }
+        if (cmView) {
+            cmView.setOption('theme', theme === 'dark' ? 'material-darker' : 'eclipse');
+        }
+        try { localStorage.setItem(STORAGE.theme, theme); } catch (e) { }
+    }
+
+    function initTheme() {
+        let saved = 'light';
+        try { saved = localStorage.getItem(STORAGE.theme) || 'light'; } catch (e) { }
+        applyTheme(saved);
+    }
+
+    function toggleTheme() {
+        const current = document.body.dataset.theme;
+        applyTheme(current === 'dark' ? 'light' : 'dark');
+    }
+
+    // ============================================
+    // РЕДАКТОР
+    // ============================================
     function createEditor() {
         try {
             cmView = CodeMirror.fromTextArea($('codeEditor'), {
@@ -1303,14 +1455,32 @@
     let lastSavedAt = null;
     let lastSavedTreeHash = '';
 
-    function loadProject() {
-        let stored = null;
-        try { stored = readStoredProject(); } catch (e) { stored = null; }
-        if (stored) {
-            fileSystem = stored.tree;
-            if (stored.source === 'backup') toast('Загружена резервная копия.', { type: 'warn' });
-            if (stored.source === 'legacy') toast('Проект перенесен.', { type: 'success' });
+    async function loadProject() {
+        // 1. Пробуем OPFS
+        let opfsData = null;
+        try { opfsData = await loadFromOPFS(); } catch (e) { }
+        
+        let tree = null;
+        let source = 'default';
+        
+        if (opfsData && Array.isArray(opfsData.tree) && opfsData.tree.length) {
+            tree = normalizeTree(opfsData.tree);
+            source = 'opfs';
         }
+        
+        // 2. Fallback на localStorage
+        if (!tree) {
+            let stored = null;
+            try { stored = readStoredProject(); } catch (e) { stored = null; }
+            if (stored) {
+                tree = stored.tree;
+                source = stored.source;
+                if (stored.source === 'backup') toast('Загружена резервная копия.', { type: 'warn' });
+                if (stored.source === 'legacy') toast('Проект перенесен.', { type: 'success' });
+            }
+        }
+        
+        if (tree) fileSystem = tree;
 
         const ui = safeParse(localStorage.getItem(STORAGE.ui) || 'null') || {};
         const files = getAllFiles(fileSystem);
@@ -1353,6 +1523,11 @@
             localStorage.setItem(STORAGE.ui, JSON.stringify({ active: activeFileId, tabs: openFileIds, settings: uiSettings }));
             lastSavedAt = new Date();
             lastSavedTreeHash = digest;
+            
+            // OPFS (асинхронно)
+            saveToOPFS({ v: 3, tree: fileSystem, active: activeFileId, tabs: openFileIds, savedAt: Date.now() })
+                .then(ok => { if (!ok) console.warn('OPFS save failed, localStorage only'); });
+            
             setSaveStatus('saved', `<i class="fa-solid fa-check"></i> Сохранено в ${formatTime(lastSavedAt)}`);
             return true;
         } catch (error) {
@@ -1731,6 +1906,18 @@
     $('closeSettingsBtn').addEventListener('click', () => settingsModal.classList.remove('open'));
     settingsModal.addEventListener('click', (event) => { if (event.target === settingsModal) settingsModal.classList.remove('open'); });
 
+    // Тема
+    $('themeToggle').addEventListener('click', toggleTheme);
+    $('themeToggle').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleTheme(); }
+    });
+    
+    // Кнопка "Три точки"
+    $('btnDots').addEventListener('click', () => { settingsModal.classList.add('open'); pushGuard(); });
+
+    // ============================================
+    // КОНСОЛЬ
+    // ============================================
     const CONSOLE_SHIM = `(function () {
         var send = function (type, args, stack) {
             try {
@@ -1985,6 +2172,115 @@
         setTimeout(() => URL.revokeObjectURL(url), 4000);
     }
 
+    // --- ZIP ИМПОРТ (через JSZip) ---
+    function buildTreeFromZipPaths(paths) {
+        // paths: [{ path: "folder/file.js", content: "..." }]
+        const root = [];
+        const dirMap = new Map();
+        
+        // Сначала создаём все папки
+        paths.forEach(({ path }) => {
+            const parts = path.split('/').filter(Boolean);
+            let current = root;
+            let currentPath = '';
+            for (let i = 0; i < parts.length - 1; i++) {
+                const part = parts[i];
+                currentPath = currentPath ? `${currentPath}/${part}` : part;
+                if (!dirMap.has(currentPath)) {
+                    const folder = { id: genId(), name: part, type: 'folder', isOpen: true, children: [] };
+                    dirMap.set(currentPath, folder);
+                    current.push(folder);
+                }
+                current = dirMap.get(currentPath).children;
+            }
+        });
+        
+        // Затем файлы
+        paths.forEach(({ path, content }) => {
+            const parts = path.split('/').filter(Boolean);
+            if (parts.length === 0) return;
+            const fileName = parts[parts.length - 1];
+            let current = root;
+            let currentPath = '';
+            for (let i = 0; i < parts.length - 1; i++) {
+                const part = parts[i];
+                currentPath = currentPath ? `${currentPath}/${part}` : part;
+                if (dirMap.has(currentPath)) {
+                    current = dirMap.get(currentPath).children;
+                } else {
+                    // Fallback, если папка не была создана
+                    const folder = { id: genId(), name: part, type: 'folder', isOpen: true, children: [] };
+                    dirMap.set(currentPath, folder);
+                    current.push(folder);
+                    current = folder.children;
+                }
+            }
+            // Проверка на дубликат имени
+            let finalName = fileName;
+            let counter = 1;
+            while (current.some(item => item.name.toLowerCase() === finalName.toLowerCase())) {
+                const dot = fileName.lastIndexOf('.');
+                if (dot > 0) {
+                    finalName = `${fileName.slice(0, dot)} (${counter})${fileName.slice(dot)}`;
+                } else {
+                    finalName = `${fileName} (${counter})`;
+                }
+                counter++;
+            }
+            current.push({ id: genId(), name: finalName, type: 'file', content });
+        });
+        
+        return root;
+    }
+
+    async function importZip(file) {
+        try {
+            const zip = await JSZip.loadAsync(file);
+            const fileEntries = [];
+            const names = Object.keys(zip.files);
+            
+            for (const name of names) {
+                const entry = zip.files[name];
+                if (entry.dir) continue;
+                if (name.startsWith('__MACOSX') || name.startsWith('.')) continue;
+                if (name.includes('/.')) continue;
+                
+                const content = await entry.async('string');
+                fileEntries.push({ path: name, content });
+            }
+            
+            if (fileEntries.length === 0) {
+                toast('Архив пуст или не содержит файлов.', { type: 'error' });
+                return;
+            }
+            
+            const ok = await confirmAction(
+                'Импорт ZIP',
+                `Найдено файлов: ${fileEntries.length}. Текущий проект будет заменён. Продолжить?`
+            );
+            if (!ok) return;
+            
+            const newTree = buildTreeFromZipPaths(fileEntries);
+            const normalized = normalizeTree(newTree);
+            
+            if (!normalized || !normalized.length) {
+                toast('Не удалось построить дерево файлов.', { type: 'error' });
+                return;
+            }
+            
+            fileSystem = normalized;
+            activeFileId = getAllFiles(fileSystem)[0]?.id || null;
+            openFileIds = activeFileId ? [activeFileId] : [];
+            lastSavedTreeHash = '';
+            saveNow(true);
+            renderEditorAndTabs();
+            toast(`Импортировано файлов: ${fileEntries.length}`, { type: 'success' });
+        } catch (e) {
+            console.error(e);
+            toast(`Ошибка импорта ZIP: ${e.message}`, { type: 'error' });
+        }
+    }
+
     // --- МОДАЛ ЭКСПОРТА ---
     const exportModal = $('exportModal');
 
@@ -2010,6 +2306,8 @@
                 } catch (e) {
                     return false;
                 }
+            case 'import-zip':
+                return true;
             default:
                 return false;
         }
@@ -2089,6 +2387,15 @@
         if (action === 'download') exportDownload();
         else if (action === 'save-as') exportSaveAs();
         else if (action === 'share') exportShare();
+        else if (action === 'import-zip') $('importZipFile').click();
+    });
+
+    // Импорт ZIP
+    $('importZipFile').addEventListener('change', (event) => {
+        const file = event.target.files && event.target.files[0];
+        event.target.value = '';
+        if (!file) return;
+        importZip(file);
     });
 
     // --- JSON ЭКСПОРТ / ИМПОРТ ---
@@ -2692,12 +2999,17 @@
 
     function renderAll() { renderEditorAndTabs(); }
 
-    createEditor();
-    loadUiSettings();
-    loadProject();
-    renderAll();
-    saveNow(true);
-    setSaveStatus('saved', '<i class="fa-solid fa-check"></i> Готово');
+    // === Асинхронная инициализация ===
+    (async function init() {
+        await initOPFS();
+        createEditor();
+        loadUiSettings();
+        initTheme();
+        await loadProject();
+        renderAll();
+        saveNow(true);
+        setSaveStatus('saved', '<i class="fa-solid fa-check"></i> Готово');
+    })();
 
     window.__codedock = { version: APP_VERSION, getFileSystem: () => fileSystem, loadProject };
 </script>
