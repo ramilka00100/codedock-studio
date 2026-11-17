@@ -7,9 +7,9 @@
     <meta name="description" content="CodeDock Studio — мобильный редактор HTML, CSS и JS с предпросмотром и консолью.">
 
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#13131a">
+    <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="CodeDock">
 
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -19,24 +19,24 @@
     
     <!-- CodeMirror 5 CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/eclipse.min.css">
     
     <style>
         :root {
-            --bg-main: #13131a;
-            --bg-panel: #181822;
-            --bg-card: #1f1f2c;
-            --bg-hover: #282838;
-            --accent: #8b5cf6;
-            --accent-hover: #7c3aed;
-            --accent-glow: rgba(139, 92, 246, 0.25);
-            --text-main: #f3f4f6;
-            --text-muted: #8e92a4;
-            --border: #2c2c3d;
+            --bg-main: #ffffff;
+            --bg-panel: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-hover: #f1f5f9;
+            --accent: #0ea5e9;
+            --accent-hover: #0284c7;
+            --accent-glow: rgba(14, 165, 233, 0.25);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
             --danger: #ef4444;
-            --success: #4ade80;
-            --info: #38bdf8;
-            --warn: #facc15;
+            --success: #10b981;
+            --info: #06b6d4;
+            --warn: #f59e0b;
             --editor-font-size: 13px;
             --editor-font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         }
@@ -50,7 +50,7 @@
         }
 
         body {
-            background-color: #0b0b0f;
+            background-color: #e2e8f0;
             color: var(--text-main);
             display: flex;
             justify-content: center;
@@ -188,7 +188,7 @@
             position: relative;
         }
 
-        .tab-chip.active { color: var(--text-main); border-color: var(--accent); background-color: rgba(139, 92, 246, 0.14); }
+        .tab-chip.active { color: var(--text-main); border-color: var(--accent); background-color: rgba(14, 165, 233, 0.1); }
 
         .tab-close {
             display: flex;
@@ -203,7 +203,7 @@
             transition: all 0.15s;
         }
 
-        .tab-close:hover, .tab-close:active { background-color: rgba(255, 255, 255, 0.1); color: var(--danger); }
+        .tab-close:hover, .tab-close:active { background-color: rgba(0, 0, 0, 0.08); color: var(--danger); }
 
         .editor-body { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; background-color: var(--bg-main); }
 
@@ -259,15 +259,16 @@
             font-family: var(--editor-font-family);
             font-size: var(--editor-font-size);
             background-color: var(--bg-main);
+            color: var(--text-main);
         }
         
         .CodeMirror-gutters {
-            background-color: #101016 !important;
+            background-color: var(--bg-panel) !important;
             border-right: 1px solid var(--border) !important;
         }
 
         .CodeMirror-linenumber {
-            color: #52566b;
+            color: #94a3b8;
         }
 
         .CodeMirror-cursor {
@@ -275,11 +276,11 @@
         }
         
         .CodeMirror-activeline-background {
-            background: rgba(255, 255, 255, 0.03) !important;
+            background: rgba(0, 0, 0, 0.025) !important;
         }
         
         .CodeMirror-selected {
-            background: rgba(139, 92, 246, 0.3) !important;
+            background: rgba(14, 165, 233, 0.2) !important;
         }
 
         .edge-swipe-area { position: absolute; left: 0; top: 0; bottom: 0; width: 24px; z-index: 15; touch-action: pan-y; }
@@ -287,7 +288,7 @@
         .drawer-backdrop {
             position: absolute;
             inset: 0;
-            background: rgba(0, 0, 0, 0.65);
+            background: rgba(15, 23, 42, 0.35);
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.22s ease;
@@ -389,12 +390,12 @@
             padding: 9px 10px;
             margin-bottom: 6px;
             background-color: var(--bg-card);
-            border: 1px solid transparent;
+            border: 1px solid var(--border);
             border-radius: 11px;
             cursor: pointer;
         }
 
-        .tree-item.active { border-color: var(--accent); background-color: rgba(139, 92, 246, 0.14); }
+        .tree-item.active { border-color: var(--accent); background-color: rgba(14, 165, 233, 0.1); }
 
         .tree-info { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
         .tree-info span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem; }
@@ -408,7 +409,7 @@
         .tree-actions { display: flex; gap: 4px; margin-left: 6px; }
 
         .action-icon {
-            background-color: rgba(255, 255, 255, 0.05);
+            background-color: rgba(0, 0, 0, 0.04);
             border: none;
             color: var(--text-muted);
             width: 28px;
@@ -424,10 +425,10 @@
         .action-icon.delete:hover { color: var(--danger); background-color: rgba(239, 68, 68, 0.15); }
 
         .icon-html { color: #e34c26; }
-        .icon-css { color: #38bdf8; }
-        .icon-js { color: #facc15; }
-        .icon-json { color: #4ade80; }
-        .icon-folder { color: #a78bfa; }
+        .icon-css { color: #0284c7; }
+        .icon-js { color: #f59e0b; }
+        .icon-json { color: #10b981; }
+        .icon-folder { color: #0ea5e9; }
         .icon-default { color: var(--text-muted); }
 
         .project-stats {
@@ -490,7 +491,7 @@
             transform: translateY(100%);
             transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
             z-index: 50;
-            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.08);
         }
 
         .console-panel.open { transform: translateY(0); }
@@ -519,11 +520,12 @@
             font-family: var(--editor-font-family);
             font-size: 12px;
             line-height: 1.4;
+            background-color: var(--bg-main);
         }
 
         .console-line {
             padding: 4px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
             word-wrap: break-word;
             white-space: pre-wrap;
             display: flex;
@@ -535,8 +537,8 @@
 
         .console-line.log { color: var(--text-main); }
         .console-line.info { color: var(--info); }
-        .console-line.warn { color: var(--warn); background: rgba(250, 204, 21, 0.1); }
-        .console-line.error { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+        .console-line.warn { color: #b45309; background: rgba(245, 158, 11, 0.1); }
+        .console-line.error { color: var(--danger); background: rgba(239, 68, 68, 0.08); }
         .console-line .stack { display: block; color: var(--text-muted); font-size: 11px; margin-top: 4px; }
 
         .console-dot {
@@ -557,7 +559,7 @@
             background-color: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
             display: none;
             flex-direction: column;
             padding: 6px;
@@ -618,12 +620,12 @@
             flex-shrink: 0;
         }
 
-        .sym-btn:active { background-color: var(--accent); border-color: var(--accent); }
+        .sym-btn:active { background-color: var(--accent); border-color: var(--accent); color: #fff; }
 
         .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(15, 23, 42, 0.4);
             backdrop-filter: blur(3px);
             display: flex;
             justify-content: center;
@@ -649,13 +651,14 @@
             gap: 12px;
             max-height: 80vh;
             overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
         }
 
         .modal-type-select { display: flex; gap: 8px; }
 
         .type-btn {
             flex: 1;
-            background: var(--bg-main);
+            background: var(--bg-panel);
             border: 1px solid var(--border);
             color: var(--text-muted);
             padding: 8px;
@@ -720,7 +723,7 @@
             width: 38px;
             height: 38px;
             border-radius: 10px;
-            background: rgba(139, 92, 246, 0.15);
+            background: rgba(14, 165, 233, 0.15);
             color: var(--accent);
             display: flex;
             align-items: center;
@@ -759,7 +762,7 @@
             display: none;
             flex-direction: column;
             gap: 6px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
         }
 
         .search-panel.open { display: flex; }
@@ -823,7 +826,7 @@
             border-radius: 12px;
             padding: 11px 12px;
             font-size: 0.86rem;
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.15);
             animation: toast-in 0.18s ease;
         }
 
@@ -844,7 +847,7 @@
             white-space: nowrap;
         }
 
-        .toast button:active { background: rgba(139, 92, 246, 0.15); }
+        .toast button:active { background: rgba(14, 165, 233, 0.15); }
 
         @keyframes toast-in {
             from { opacity: 0; transform: translateY(10px); }
@@ -990,7 +993,6 @@
                     <i class="fa-solid fa-terminal"></i>
                     <span class="console-dot" id="previewConsoleDot"></span>
                 </button>
-                <!-- Кнопка возврата: перевёрнутый на 180 градусов треугольник -->
                 <button type="button" class="btn-icon-only btn-run" id="closePreviewBtn" title="В редактор" aria-label="В редактор" style="width:32px;height:32px;position:relative;z-index:100;">
                     <i class="fa-solid fa-play" style="transform: rotate(180deg);"></i>
                 </button>
@@ -1188,7 +1190,7 @@
             cmView = CodeMirror.fromTextArea($('codeEditor'), {
                 lineNumbers: true,
                 mode: "htmlmixed",
-                theme: "dracula",
+                theme: "eclipse",
                 tabSize: 2,
                 indentUnit: 2,
                 lineWrapping: true,
@@ -1247,7 +1249,7 @@
 
     const DEFAULT_PROJECT = [
         { id: 'demo-index', name: 'index.html', type: 'file', content: '<!DOCTYPE html>\n<html lang="ru">\n<head>\n  <meta charset="UTF-8">\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <div class="card">\n    <h1>CodeDock IDE</h1>\n    <p>Нажми кнопку ниже для проверки JS</p>\n    <button onclick="sayHi()">Нажми меня</button>\n  </div>\n  <script src="script.js"><\/script>\n</body>\n</html>' },
-        { id: 'demo-style', name: 'style.css', type: 'file', content: 'body {\n  margin: 0;\n  min-height: 100vh;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  background: #13131a;\n  color: #fff;\n  font-family: sans-serif;\n}\n.card {\n  background: #1f1f2c;\n  padding: 24px;\n  border-radius: 16px;\n  text-align: center;\n  border: 1px solid #8b5cf6;\n}\nbutton {\n  background: #8b5cf6;\n  color: #fff;\n  border: none;\n  padding: 10px 18px;\n  border-radius: 10px;\n  font-size: 16px;\n  margin-top: 10px;\n}' },
+        { id: 'demo-style', name: 'style.css', type: 'file', content: 'body {\n  margin: 0;\n  min-height: 100vh;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  background: #f8fafc;\n  color: #0f172a;\n  font-family: sans-serif;\n}\n.card {\n  background: #fff;\n  padding: 24px;\n  border-radius: 16px;\n  text-align: center;\n  border: 1px solid #0ea5e9;\n  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.15);\n}\nbutton {\n  background: #0ea5e9;\n  color: #fff;\n  border: none;\n  padding: 10px 18px;\n  border-radius: 10px;\n  font-size: 16px;\n  margin-top: 10px;\n}' },
         { id: 'demo-script', name: 'script.js', type: 'file', content: 'function sayHi() {\n  console.log("Привет из CodeDock!");\n  console.warn("Это предупреждение");\n  console.error("А это тестовая ошибка");\n}' },
         { id: 'demo-data', name: 'data', type: 'folder', isOpen: true, children: [{ id: 'demo-json', name: 'data.json', type: 'file', content: '{\n  "app": "CodeDock",\n  "version": "3.0"\n}' }] },
     ];
@@ -1876,7 +1878,6 @@
 
     $('runProjectBtn').addEventListener('click', runProject);
     
-    // ИСПРАВЛЕННЫЙ ОБРАБОТЧИК КНОПКИ НАЗАД
     $('closePreviewBtn').addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
