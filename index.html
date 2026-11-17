@@ -2,1127 +2,2704 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>CodeDock Studio</title>
-    <!-- FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- CodeMirror 5 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/material-darker.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/xml/xml.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/css/css.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/htmlmixed/htmlmixed.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script>
-    <!-- JSZip -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <meta name="description" content="CodeDock Studio — мобильный редактор HTML, CSS и JS с предпросмотром и консолью.">
 
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="CodeDock">
+
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-180.png">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- CodeMirror 5 CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/eclipse.min.css">
+    
     <style>
         :root {
-            --bg-color: #f5f5f5;
-            --header-bg: #ffffff;
-            --text-color: #333333;
-            --border-color: #e0e0e0;
-            --accent-color: #6200ee;
-            --accent-hover: #3700b3;
-            --danger-color: #cf6679;
-            --panel-bg: #ffffff;
-            --shadow: 0 2px 8px rgba(0,0,0,0.1);
-            --input-bg: #f0f0f0;
+            --bg-main: #ffffff;
+            --bg-panel: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-hover: #f1f5f9;
+            --accent: #0ea5e9;
+            --accent-hover: #0284c7;
+            --accent-glow: rgba(14, 165, 233, 0.25);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+            --success: #10b981;
+            --info: #06b6d4;
+            --warn: #f59e0b;
+            --editor-font-size: 13px;
+            --editor-font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         }
 
-        [data-theme="dark"] {
-            --bg-color: #121212;
-            --header-bg: #1e1e1e;
-            --text-color: #e0e0e0;
-            --border-color: #333333;
-            --accent-color: #bb86fc;
-            --accent-hover: #9a67ea;
-            --danger-color: #cf6679;
-            --panel-bg: #1e1e1e;
-            --shadow: 0 2px 8px rgba(0,0,0,0.5);
-            --input-bg: #2c2c2c;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body, html { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-color); overflow: hidden; transition: background-color 0.3s, color 0.3s; }
+        body {
+            background-color: #e2e8f0;
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+        }
+
+        .workspace {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-main);
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .brand-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 14px;
+            background-color: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            position: relative;
+            z-index: 50;
+            flex-shrink: 0;
+            gap: 8px;
+        }
+
+        .brand-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+            min-width: 0;
+        }
+
+        .brand-right .btn-icon-only {
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+        }
+
+        .btn-icon-only.btn-run {
+            background-color: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            box-shadow: 0 2px 8px var(--accent-glow);
+        }
+        .btn-icon-only.btn-run:active {
+            background-color: var(--accent-hover);
+            border-color: var(--accent-hover);
+        }
+
+        .logo-btn {
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: transform 0.1s, opacity 0.1s;
+            -webkit-tap-highlight-color: transparent;
+            flex-shrink: 0;
+        }
+
+        .logo-btn:active { transform: scale(0.95); opacity: 0.8; }
+        .brand-logo { height: 44px; width: auto; object-fit: contain; }
+
+        .save-status {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            min-height: 16px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+
+        .save-status i { font-size: 0.65rem; }
+        .save-status.saving { color: var(--warn); }
+        .save-status.saved { color: var(--success); }
+        .save-status.error { color: var(--danger); }
+
+        .editor-topbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            background-color: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .btn-icon-only {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.15s;
+            position: relative;
+        }
+
+        .btn-icon-only:active { transform: scale(0.95); border-color: var(--accent); }
+
+        .tabs-bar { flex: 1; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+        .tabs-bar::-webkit-scrollbar { display: none; }
+
+        .tab-chip {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 11px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .tab-chip.active { color: var(--text-main); border-color: var(--accent); background-color: rgba(14, 165, 233, 0.1); }
+
+        .tab-close {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            margin-left: 2px;
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            transition: all 0.15s;
+        }
+
+        .tab-close:hover, .tab-close:active { background-color: rgba(0, 0, 0, 0.08); color: var(--danger); }
+
+        .editor-body { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; background-color: var(--bg-main); }
+
+        .editor-action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        .action-group { display: flex; gap: 8px; width: 100%; justify-content: space-between; }
+
+        .btn-action {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            height: 34px;
+            padding: 0;
+            width: 34px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: 1px solid transparent;
+            flex-shrink: 0;
+        }
+
+        .btn-action:active { transform: scale(0.96); }
+        .btn-icon { background-color: var(--bg-card); color: var(--text-main); border-color: var(--border); }
+        .btn-icon:active { border-color: var(--accent); color: var(--accent); }
+        .btn-run { background-color: var(--accent); color: #fff; box-shadow: 0 2px 8px var(--accent-glow); }
+
+        .editor-content { flex: 1; display: flex; position: relative; overflow: hidden; width: 100%; }
+
+        #codeEditor {
+            flex: 1;
+            height: 100%;
+            width: 100%;
+            position: relative;
+            z-index: 2;
+        }
+
+        .CodeMirror {
+            height: 100% !important;
+            width: 100% !important;
+            flex: 1 !important;
+            font-family: var(--editor-font-family);
+            font-size: var(--editor-font-size);
+            background-color: var(--bg-main);
+            color: var(--text-main);
+        }
         
-        .app-container { display: flex; flex-direction: column; height: 100%; width: 100%; overflow: hidden; }
+        .CodeMirror-gutters {
+            background-color: var(--bg-panel) !important;
+            border-right: 1px solid var(--border) !important;
+        }
+
+        .CodeMirror-linenumber {
+            color: #94a3b8;
+        }
+
+        .CodeMirror-cursor {
+            border-left: 2px solid var(--accent) !important;
+        }
         
-        /* Шапка */
-        .brand-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--header-bg); border-bottom: 1px solid var(--border-color); flex-shrink: 0; z-index: 20; }
-        .brand-title { font-weight: bold; font-size: 16px; color: var(--accent-color); }
-        .header-actions { display: flex; align-items: center; gap: 8px; }
-        .icon-btn { background: none; border: none; color: var(--text-color); font-size: 18px; cursor: pointer; padding: 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
-        .icon-btn:active { background: var(--border-color); }
-        .btn-save { background: var(--accent-color); color: #fff; padding: 6px 16px; border-radius: 20px; border: none; font-weight: 600; cursor: pointer; font-size: 14px; transition: background 0.2s; }
-        .btn-save:active { background: var(--accent-hover); }
+        .CodeMirror-activeline-background {
+            background: rgba(0, 0, 0, 0.025) !important;
+        }
         
-        /* Вкладки */
-        .tabs-container { display: flex; overflow-x: auto; background: var(--header-bg); border-bottom: 1px solid var(--border-color); flex-shrink: 0; scrollbar-width: none; z-index: 10; }
-        .tabs-container::-webkit-scrollbar { display: none; }
-        .tab { padding: 10px 16px; font-size: 13px; white-space: nowrap; border-right: 1px solid var(--border-color); cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--text-color); opacity: 0.7; }
-        .tab.active { opacity: 1; border-bottom: 2px solid var(--accent-color); background: var(--bg-color); }
-        .tab .close-tab { font-size: 12px; padding: 2px; border-radius: 50%; }
-        .tab .close-tab:hover { background: var(--border-color); }
+        .CodeMirror-selected {
+            background: rgba(14, 165, 233, 0.2) !important;
+        }
 
-        /* Основная область */
-        .main-area { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; }
-        
-        /* Редактор */
-        .editor-wrapper { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-        .CodeMirror { width: 100% !important; flex: 1 !important; height: 100% !important; font-size: 14px; }
-        
-        /* Файловое меню (Overlay) */
-        .file-menu-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--panel-bg); z-index: 30; transform: translateX(-100%); transition: transform 0.3s ease; display: flex; flex-direction: column; }
-        .file-menu-overlay.open { transform: translateX(0); }
-        .file-menu-header { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border-color); }
-        .file-menu-list { flex: 1; overflow-y: auto; padding: 8px; }
-        .file-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
-        .file-item.active { background: var(--accent-color); color: #fff; }
-        .file-item .actions { display: flex; gap: 10px; }
-        .file-item .actions i { opacity: 0.5; cursor: pointer; }
-        .file-item .actions i:hover { opacity: 1; }
+        .edge-swipe-area { position: absolute; left: 0; top: 0; bottom: 0; width: 24px; z-index: 15; touch-action: pan-y; }
 
-        /* Предпросмотр */
-        .preview-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 40; display: none; flex-direction: column; }
-        .preview-container.open { display: flex; }
-        .preview-bar { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--header-bg); border-bottom: 1px solid var(--border-color); z-index: 100; }
-        .preview-bar button { background: var(--accent-color); color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
-        .preview-bar button.flip { transform: rotate(180deg); }
-        .preview-iframe { flex: 1; border: none; width: 100%; height: 100%; background: #fff; }
+        .drawer-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.35);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.22s ease;
+            z-index: 20;
+        }
 
-        /* Консоль */
-        .console-panel { position: absolute; bottom: 0; left: 0; width: 100%; height: 30%; background: #1e1e1e; color: #00ff00; z-index: 50; display: none; flex-direction: column; border-top: 1px solid var(--border-color); font-family: monospace; font-size: 12px; }
-        .console-panel.open { display: flex; }
-        .console-header { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: #333; color: #fff; }
-        .console-header button { background: none; border: none; color: #fff; cursor: pointer; }
-        .console-output { flex: 1; overflow-y: auto; padding: 8px; }
+        .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
 
-        /* Модалки */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: none; justify-content: center; align-items: flex-end; }
-        .modal-overlay.open { display: flex; }
-        .modal-content { background: var(--panel-bg); width: 100%; max-width: 480px; border-radius: 16px 16px 0 0; padding: 20px; animation: slideUp 0.3s ease; max-height: 80vh; overflow-y: auto; }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .modal-header h3 { font-size: 18px; }
-        .modal-option { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 10px; cursor: pointer; background: var(--input-bg); }
-        .modal-option:hover { border-color: var(--accent-color); }
-        .modal-option i { font-size: 20px; color: var(--accent-color); width: 24px; text-align: center; }
-        .modal-option .opt-text { display: flex; flex-direction: column; }
-        .modal-option .opt-text .title { font-weight: 600; font-size: 14px; }
-        .modal-option .opt-text .subtitle { font-size: 12px; opacity: 0.6; }
-        
-        /* Переключатель темы */
-        .theme-toggle { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: var(--input-bg); border-radius: 10px; margin-bottom: 10px; border: 1px solid var(--border-color); }
-        .theme-toggle span { font-weight: 600; font-size: 14px; }
-        .toggle-switch { width: 48px; height: 28px; background: var(--border-color); border-radius: 14px; position: relative; cursor: pointer; transition: background 0.3s; }
-        .toggle-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; background: #fff; border-radius: 50%; transition: transform 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        .toggle-switch.active { background: var(--accent-color); }
-        .toggle-switch.active::after { transform: translateX(20px); }
+        .file-drawer {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 84%;
+            max-width: 340px;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transform: translateX(-100%);
+            transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+            z-index: 30;
+            touch-action: pan-y;
+        }
 
-        /* Контекстное меню */
-        .context-menu { position: fixed; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow); z-index: 2000; display: none; flex-direction: column; min-width: 150px; overflow: hidden; }
-        .context-menu.open { display: flex; }
-        .context-menu-item { padding: 10px 16px; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 10px; color: var(--text-color); }
-        .context-menu-item:hover { background: var(--input-bg); }
-        .context-menu-item i { width: 16px; }
+        .file-drawer.open { transform: translateX(0); }
 
-        /* Тосты */
-        .toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 3000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
-        .toast { background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 14px; opacity: 0; animation: toastIn 0.3s forwards; }
-        @keyframes toastIn { to { opacity: 1; } }
+        .file-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 6px;
+            padding: 12px 12px;
+            border-bottom: 1px solid var(--border);
+            background-color: var(--bg-main);
+        }
 
-        /* Поиск и замена */
-        .search-panel { position: absolute; top: 0; left: 0; width: 100%; padding: 8px; background: var(--header-bg); border-bottom: 1px solid var(--border-color); z-index: 15; display: none; gap: 8px; flex-direction: column; }
+        .header-title { display: flex; align-items: center; gap: 8px; font-size: 1.05rem; font-weight: 700; color: var(--accent); }
+        .header-actions { display: flex; gap: 6px; align-items: center; }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-primary:active { background-color: var(--accent-hover); }
+
+        .btn-secondary {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 11px;
+            border-radius: 11px;
+            width: 100%;
+            font-size: 0.92rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .search-box { padding: 10px 14px 6px; position: relative; }
+
+        .search-box i {
+            position: absolute;
+            left: 25px;
+            top: calc(50% + 2px);
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+
+        .search-box input {
+            width: 100%;
+            background-color: var(--bg-main);
+            border: 1px solid var(--border);
+            padding: 9px 10px 9px 32px;
+            border-radius: 10px;
+            color: var(--text-main);
+            outline: none;
+            font-size: 0.88rem;
+        }
+
+        .search-box input:focus { border-color: var(--accent); }
+
+        .file-tree-container { flex: 1; overflow-y: auto; padding: 8px 14px 14px; touch-action: pan-y; }
+
+        .tree-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 9px 10px;
+            margin-bottom: 6px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            cursor: pointer;
+        }
+
+        .tree-item.active { border-color: var(--accent); background-color: rgba(14, 165, 233, 0.1); }
+
+        .tree-info { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+        .tree-info span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem; }
+
+        .chevron-icon { font-size: 0.68rem; color: var(--text-muted); width: 10px; transition: transform 0.2s; }
+        .chevron-icon.rotated { transform: rotate(90deg); }
+
+        .folder-children { padding-left: 14px; border-left: 1px dashed var(--border); margin-left: 12px; margin-bottom: 6px; display: none; }
+        .folder-children.open { display: block; }
+
+        .tree-actions { display: flex; gap: 4px; margin-left: 6px; }
+
+        .action-icon {
+            background-color: rgba(0, 0, 0, 0.04);
+            border: none;
+            color: var(--text-muted);
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .action-icon.delete:hover { color: var(--danger); background-color: rgba(239, 68, 68, 0.15); }
+
+        .icon-html { color: #e34c26; }
+        .icon-css { color: #0284c7; }
+        .icon-js { color: #f59e0b; }
+        .icon-json { color: #10b981; }
+        .icon-folder { color: #0ea5e9; }
+        .icon-default { color: var(--text-muted); }
+
+        .project-stats {
+            padding: 7px 14px;
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            background-color: var(--bg-main);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .file-footer { padding: 10px 14px 14px; background-color: var(--bg-main); }
+
+        .preview-overlay {
+            position: absolute;
+            inset: 0;
+            background-color: #fff;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(100%);
+            transition: transform 0.25s ease;
+            z-index: 40;
+        }
+
+        .preview-overlay.open { transform: translateY(0); }
+
+        .preview-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            border-bottom: 1px solid var(--border);
+            gap: 8px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .preview-frame { 
+            flex: 1; 
+            width: 100%; 
+            border: none; 
+            background: #fff; 
+            position: relative;
+            z-index: 5;
+        }
+
+        .console-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 45%;
+            background-color: var(--bg-panel);
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transform: translateY(100%);
+            transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+            z-index: 50;
+            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .console-panel.open { transform: translateY(0); }
+
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 14px;
+            background-color: var(--bg-main);
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .console-header-actions { display: flex; gap: 8px; }
+
+        .console-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.9rem; padding: 4px; }
+        .console-btn:active { color: var(--accent); }
+
+        .console-output {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 14px;
+            font-family: var(--editor-font-family);
+            font-size: 12px;
+            line-height: 1.4;
+            background-color: var(--bg-main);
+        }
+
+        .console-line {
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            display: flex;
+            gap: 6px;
+            align-items: flex-start;
+        }
+
+        .console-line i { margin-top: 2px; font-size: 10px; }
+
+        .console-line.log { color: var(--text-main); }
+        .console-line.info { color: var(--info); }
+        .console-line.warn { color: #b45309; background: rgba(245, 158, 11, 0.1); }
+        .console-line.error { color: var(--danger); background: rgba(239, 68, 68, 0.08); }
+        .console-line .stack { display: block; color: var(--text-muted); font-size: 11px; margin-top: 4px; }
+
+        .console-dot {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--danger);
+            display: none;
+        }
+
+        .console-dot.show { display: block; }
+
+        .custom-context-menu {
+            position: fixed;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
+            display: none;
+            flex-direction: column;
+            padding: 6px;
+            z-index: 9999;
+            min-width: 160px;
+            backdrop-filter: blur(8px);
+        }
+
+        .custom-context-menu.open { display: flex; }
+
+        .context-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.15s;
+            background: transparent;
+            border: none;
+            width: 100%;
+            text-align: left;
+        }
+
+        .context-menu-item:hover { background-color: var(--bg-hover); color: var(--accent); }
+        .context-menu-item i { width: 16px; text-align: center; color: var(--text-muted); }
+        .context-menu-item:hover i { color: var(--accent); }
+
+        .symbol-bar {
+            display: flex;
+            gap: 6px;
+            padding: 8px 10px;
+            background-color: var(--bg-panel);
+            border-top: 1px solid var(--border);
+            overflow-x: auto;
+            scrollbar-width: none;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 20;
+        }
+
+        .symbol-bar::-webkit-scrollbar { display: none; }
+
+        .sym-btn {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            min-width: 36px;
+            height: 34px;
+            padding: 0 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .sym-btn:active { background-color: var(--accent); border-color: var(--accent); color: #fff; }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(3px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 1000;
+            padding: 16px;
+        }
+
+        .modal-overlay.open { opacity: 1; pointer-events: auto; }
+
+        .modal-card {
+            background-color: var(--bg-card);
+            width: 92%;
+            max-width: 340px;
+            padding: 18px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
+        }
+
+        .modal-type-select { display: flex; gap: 8px; }
+
+        .type-btn {
+            flex: 1;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 8px;
+            border-radius: 9px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.88rem;
+        }
+
+        .type-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+        .modal-field { display: flex; flex-direction: column; gap: 5px; }
+        .modal-field label { font-size: 0.78rem; color: var(--text-muted); }
+
+        .modal-card input,
+        .modal-card select {
+            width: 100%;
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            padding: 10px 12px;
+            border-radius: 10px;
+            color: var(--text-main);
+            font-size: 0.92rem;
+            outline: none;
+        }
+
+        .modal-actions { display: flex; gap: 8px; margin-top: 4px; }
+        .modal-actions button { flex: 1; justify-content: center; }
+
+        .modal-check { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+        .modal-check input { width: 18px; height: 18px; }
+
+        .export-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .export-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.15s;
+            color: var(--text-main);
+            width: 100%;
+            font-family: inherit;
+        }
+
+        .export-option:active {
+            border-color: var(--accent);
+            background: var(--bg-hover);
+            transform: scale(0.98);
+        }
+
+        .export-option-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: rgba(14, 165, 233, 0.15);
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 1rem;
+        }
+
+        .export-option-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .export-option-text strong {
+            font-size: 0.92rem;
+            font-weight: 600;
+        }
+
+        .export-option-text span {
+            font-size: 0.76rem;
+            color: var(--text-muted);
+        }
+
+        .search-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 25;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            padding: 8px 10px;
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+        }
+
         .search-panel.open { display: flex; }
-        .search-row { display: flex; gap: 8px; align-items: center; }
-        .search-row input { flex: 1; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--input-bg); color: var(--text-color); font-size: 13px; }
-        .search-row button { padding: 6px 10px; background: var(--accent-color); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; }
 
-        /* Скрытые элементы */
-        .hidden { display: none !important; }
+        .search-row { display: flex; gap: 6px; align-items: center; }
+
+        .search-row input {
+            flex: 1;
+            min-width: 0;
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 9px;
+            color: var(--text-main);
+            padding: 8px 10px;
+            font-size: 0.88rem;
+            outline: none;
+        }
+
+        .search-row input:focus { border-color: var(--accent); }
+
+        .search-count { font-size: 0.75rem; color: var(--text-muted); min-width: 48px; text-align: center; }
+
+        .search-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .search-btn:active { border-color: var(--accent); color: var(--accent); }
+        .search-btn.wide { width: auto; padding: 0 10px; font-size: 0.8rem; font-weight: 600; }
+
+        .toast-container {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: calc(env(safe-area-inset-bottom) + 74px);
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: min(92%, 420px);
+            pointer-events: none;
+        }
+
+        .toast {
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: 12px;
+            padding: 11px 12px;
+            font-size: 0.86rem;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.15);
+            animation: toast-in 0.18s ease;
+        }
+
+        .toast.error { border-left-color: var(--danger); }
+        .toast.success { border-left-color: var(--success); }
+        .toast.warn { border-left-color: var(--warn); }
+        .toast span { flex: 1; }
+
+        .toast button {
+            background: transparent;
+            border: none;
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 0.82rem;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+
+        .toast button:active { background: rgba(14, 165, 233, 0.15); }
+
+        @keyframes toast-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hidden-file-input {
+            position: fixed;
+            left: -9999px;
+            top: 0;
+            opacity: 0;
+            width: 1px;
+            height: 1px;
+        }
     </style>
 </head>
-<body data-theme="light">
+<body>
 
-<div class="app-container" id="appContainer">
-    <!-- Шапка -->
-    <header class="brand-header">
-        <div class="brand-title">CodeDock</div>
-        <div class="header-actions">
-            <button class="icon-btn" id="btnSearch" title="Поиск"><i class="fa fa-search"></i></button>
-            <button class="icon-btn" id="btnConsoleTop" title="Консоль"><i class="fa fa-terminal"></i></button>
-            <button class="icon-btn" id="btnRun" style="color: var(--accent-color);" title="Запуск"><i class="fa fa-play"></i></button>
-            <button class="btn-save" id="btnSave">Сохранить</button>
-            <button class="icon-btn" id="btnSettings" title="Настройки"><i class="fa fa-ellipsis-v"></i></button>
+<div class="workspace" id="workspace">
+    <div class="brand-header">
+        <button class="logo-btn" id="resetCacheBtn" title="Сбросить кэш и перезагрузить" aria-label="Сбросить кэш и перезагрузить">
+            <img src="logo.png" alt="CodeDock Studio" class="brand-logo">
+        </button>
+        <div class="brand-right">
+            <div class="save-status" id="saveStatus" aria-live="polite"></div>
+            <button class="btn-icon-only" id="consoleBtn" title="Консоль" aria-label="Консоль">
+                <i class="fa-solid fa-terminal"></i>
+                <span class="console-dot" id="consoleDot"></span>
+            </button>
+            <button class="btn-icon-only btn-run" id="runProjectBtn" title="Предпросмотр" aria-label="Предпросмотр">
+                <i class="fa-solid fa-play"></i>
+            </button>
         </div>
+    </div>
+
+    <header class="editor-topbar">
+        <button class="btn-icon-only" id="openDrawerBtn" title="Файлы проекта" aria-label="Файлы проекта">
+            <i class="fa-solid fa-folder-tree"></i>
+        </button>
+        <div class="tabs-bar" id="tabsBar"></div>
     </header>
 
-    <!-- Вкладки -->
-    <div class="tabs-container" id="tabsContainer"></div>
-
-    <!-- Основная область -->
-    <div class="main-area">
-        <!-- Файловое меню (Overlay) -->
-        <div class="file-menu-overlay" id="fileMenuOverlay">
-            <div class="file-menu-header">
-                <span>Файлы проекта</span>
-                <div>
-                    <button class="icon-btn" id="btnNewFile"><i class="fa fa-plus"></i></button>
-                    <button class="icon-btn" id="btnCloseFileMenu"><i class="fa fa-times"></i></button>
-                </div>
+    <main class="editor-body">
+        <div class="editor-action-bar">
+            <div class="action-group">
+                <button class="btn-action btn-icon" id="undoBtn" title="Отменить" aria-label="Отменить">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </button>
+                <button class="btn-action btn-icon" id="redoBtn" title="Повторить" aria-label="Повторить">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+                <button class="btn-action btn-icon" id="searchBtn" title="Поиск и замена" aria-label="Поиск и замена">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+                <button class="btn-action btn-icon" id="settingsBtn" title="Настройки" aria-label="Настройки">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+                <button class="btn-action btn-icon" id="saveProjectBtn" title="Сохранить" aria-label="Сохранить">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                </button>
             </div>
-            <div class="file-menu-list" id="fileMenuList"></div>
         </div>
 
-        <!-- Редактор -->
-        <div class="editor-wrapper" id="editorWrapper">
-            <textarea id="codeEditor"></textarea>
-        </div>
-
-        <!-- Панель поиска -->
         <div class="search-panel" id="searchPanel">
             <div class="search-row">
-                <input type="text" id="searchInput" placeholder="Найти...">
-                <button id="btnSearchNext"><i class="fa fa-arrow-down"></i></button>
-                <button id="btnSearchPrev"><i class="fa fa-arrow-up"></i></button>
-                <button id="btnCloseSearch"><i class="fa fa-times"></i></button>
+                <input type="text" id="searchInput" placeholder="Найти в файле" autocomplete="off" autocapitalize="off" autocorrect="off">
+                <span class="search-count" id="searchCount">0/0</span>
+                <button class="search-btn" id="searchPrev" title="Предыдущее" aria-label="Предыдущее"><i class="fa-solid fa-chevron-up"></i></button>
+                <button class="search-btn" id="searchNext" title="Следующее" aria-label="Следующее"><i class="fa-solid fa-chevron-down"></i></button>
+                <button class="search-btn" id="searchClose" title="Закрыть" aria-label="Закрыть"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="search-row">
-                <input type="text" id="replaceInput" placeholder="Заменить на...">
-                <button id="btnReplace"><i class="fa fa-exchange-alt"></i></button>
+                <input type="text" id="replaceInput" placeholder="Заменить на" autocomplete="off" autocapitalize="off" autocorrect="off">
+                <button class="search-btn wide" id="replaceOne">Заменить</button>
+                <button class="search-btn wide" id="replaceAll">Все</button>
             </div>
         </div>
 
-        <!-- Предпросмотр -->
-        <div class="preview-container" id="previewContainer">
-            <div class="preview-bar">
-                <button id="btnPreviewConsole"><i class="fa fa-terminal"></i> Консоль</button>
-                <button id="btnBackToEditor" class="flip" style="z-index:100;"><i class="fa fa-play"></i> Назад</button>
-            </div>
-            <iframe id="previewIframe" class="preview-iframe" sandbox="allow-scripts allow-modals allow-forms allow-same-origin"></iframe>
+        <div class="editor-content">
+            <textarea id="codeEditor" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off"></textarea>
+            <div class="edge-swipe-area" id="edgeSwipeArea"></div>
         </div>
 
-        <!-- Консоль -->
-        <div class="console-panel" id="consolePanel">
-            <div class="console-header">
-                <span>Консоль</span>
-                <button id="btnCloseConsole"><i class="fa fa-times"></i></button>
+        <div class="drawer-backdrop" id="drawerBackdrop"></div>
+
+        <aside class="file-drawer" id="fileDrawer" aria-label="Файлы проекта">
+            <div class="file-header">
+                <div class="header-title">
+                    <i class="fa-solid fa-folder-tree"></i>
+                    <span>Файлы</span>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-icon-only" style="width:32px;height:32px;" id="importBtn" title="Импорт проекта" aria-label="Импорт проекта">
+                        <i class="fa-solid fa-file-arrow-up"></i>
+                    </button>
+                    <button class="btn-icon-only" style="width:32px;height:32px;" id="exportZipBtn" title="Экспорт" aria-label="Экспорт">
+                        <i class="fa-solid fa-file-arrow-down"></i>
+                    </button>
+                    <button class="btn-icon-only" style="width:32px;height:32px;" id="collapseAllBtn" title="Свернуть папки" aria-label="Свернуть папки">
+                        <i class="fa-solid fa-angles-up"></i>
+                    </button>
+                    <button class="btn-primary" id="openCreateModal">
+                        <i class="fa-solid fa-plus"></i> Новый
+                    </button>
+                </div>
             </div>
-            <div class="console-output" id="consoleOutput"></div>
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="fileSearch" placeholder="Поиск файлов..." aria-label="Поиск файлов">
+            </div>
+            <div class="file-tree-container" id="fileTree"></div>
+            <div class="project-stats">
+                <span id="statsText">Файлов: 0 | Папок: 0</span>
+                <span id="linesCountText">Строк: 0</span>
+            </div>
+            <div class="file-footer">
+                <button class="btn-secondary" id="closeDrawerBtn">Закрыть</button>
+            </div>
+        </aside>
+    </main>
+
+    <div class="symbol-bar" id="symbolBar">
+        <button class="sym-btn" data-sym="  ">TAB</button>
+        <button class="sym-btn" data-sym="{">{</button>
+        <button class="sym-btn" data-sym="}">}</button>
+        <button class="sym-btn" data-sym="(">(</button>
+        <button class="sym-btn" data-sym=")">)</button>
+        <button class="sym-btn" data-sym="<">&lt;</button>
+        <button class="sym-btn" data-sym=">">&gt;</button>
+        <button class="sym-btn" data-sym="/">/</button>
+        <button class="sym-btn" data-sym="=">=</button>
+        <button class="sym-btn" data-sym='"'>"</button>
+        <button class="sym-btn" data-sym=";">;</button>
+    </div>
+
+    <div class="preview-overlay" id="previewOverlay">
+        <div class="preview-bar">
+            <span style="font-weight:600;font-size:0.95rem;display:flex;align-items:center;">
+                <i class="fa-solid fa-globe" style="color:var(--accent);margin-right:6px;"></i>Предпросмотр
+            </span>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button type="button" class="btn-icon-only" id="previewConsoleBtn" title="Консоль" aria-label="Консоль" style="width:32px;height:32px;">
+                    <i class="fa-solid fa-terminal"></i>
+                    <span class="console-dot" id="previewConsoleDot"></span>
+                </button>
+                <button type="button" class="btn-icon-only btn-run" id="closePreviewBtn" title="В редактор" aria-label="В редактор" style="width:32px;height:32px;position:relative;z-index:100;">
+                    <i class="fa-solid fa-play" style="transform: rotate(180deg);"></i>
+                </button>
+            </div>
+        </div>
+        <iframe class="preview-frame" id="previewFrame" title="Предпросмотр проекта" sandbox="allow-scripts allow-modals"></iframe>
+    </div>
+
+    <div class="console-panel" id="consolePanel" aria-label="Консоль">
+        <div class="console-header">
+            <span><i class="fa-solid fa-terminal"></i> Консоль</span>
+            <div class="console-header-actions">
+                <button class="console-btn" id="clearConsoleBtn" title="Очистить" aria-label="Очистить консоль"><i class="fa-solid fa-trash"></i></button>
+                <button class="console-btn" id="closeConsoleBtn" title="Закрыть" aria-label="Закрыть консоль"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+        <div class="console-output" id="consoleOutput"></div>
+    </div>
+
+</div>
+
+<div class="custom-context-menu" id="customContextMenu" role="menu">
+    <button class="context-menu-item" id="ctxSelectAll" role="menuitem"><i class="fa-solid fa-check-double"></i> Выделить всё</button>
+    <button class="context-menu-item" id="ctxCut" role="menuitem"><i class="fa-solid fa-cut"></i> Вырезать</button>
+    <button class="context-menu-item" id="ctxCopy" role="menuitem"><i class="fa-regular fa-copy"></i> Копировать</button>
+    <button class="context-menu-item" id="ctxPaste" role="menuitem"><i class="fa-regular fa-paste"></i> Вставить</button>
+    <button class="context-menu-item" id="ctxClear" style="color:var(--danger);" role="menuitem"><i class="fa-regular fa-trash-can" style="color:var(--danger);"></i> Очистить</button>
+</div>
+
+<div class="modal-overlay" id="createModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card">
+        <h3 id="modalTitle" style="font-size:1.05rem;">Новый элемент</h3>
+        <div class="modal-type-select" id="typeSelector">
+            <button type="button" class="type-btn active" data-type="file">
+                <i class="fa-regular fa-file"></i> Файл
+            </button>
+            <button type="button" class="type-btn" data-type="folder">
+                <i class="fa-regular fa-folder"></i> Папка
+            </button>
+        </div>
+        <div class="modal-field" id="parentFolderField">
+            <label for="parentFolderSelect">Расположение</label>
+            <select id="parentFolderSelect">
+                <option value="root">/ (Корень проекта)</option>
+            </select>
+        </div>
+        <div class="modal-field">
+            <label for="newItemName">Название</label>
+            <input type="text" id="newItemName" placeholder="Например: app.js или assets" autocomplete="off" autocapitalize="off" autocorrect="off">
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" id="cancelModal">Отмена</button>
+            <button type="button" class="btn-primary" id="confirmCreate">Сохранить</button>
         </div>
     </div>
 </div>
 
-<!-- Модалка экспорта -->
-<div class="modal-overlay" id="exportModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Экспорт проекта</h3>
-            <button class="icon-btn" id="btnCloseExportModal"><i class="fa fa-times"></i></button>
+<div class="modal-overlay" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="modal-card">
+        <h3 id="settingsTitle" style="font-size:1.05rem;">Настройки</h3>
+        <div class="modal-field">
+            <label for="fontSizeSelect">Размер шрифта</label>
+            <select id="fontSizeSelect">
+                <option value="12">12 px</option>
+                <option value="13" selected>13 px</option>
+                <option value="14">14 px</option>
+                <option value="15">15 px</option>
+                <option value="16">16 px</option>
+                <option value="18">18 px</option>
+            </select>
         </div>
-        <div class="modal-option" id="optDownloadZip">
-            <i class="fa fa-file-archive"></i>
-            <div class="opt-text">
-                <span class="title">Скачать ZIP</span>
-                <span class="subtitle">Сохранить проект как архив</span>
-            </div>
+        <div class="modal-field">
+            <label for="tabSizeSelect">Отступ табуляции</label>
+            <select id="tabSizeSelect">
+                <option value="2" selected>2 пробела</option>
+                <option value="4">4 пробела</option>
+            </select>
         </div>
-        <div class="modal-option" id="optSaveAs">
-            <i class="fa fa-save"></i>
-            <div class="opt-text">
-                <span class="title">Сохранить как...</span>
-                <span class="subtitle">Выбрать место на устройстве</span>
-            </div>
+        <label class="modal-check">
+            <input type="checkbox" id="wrapToggle"> Перенос длинных строк
+        </label>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" id="exportJsonBtn">Скачать JSON</button>
+            <button type="button" class="btn-primary" id="closeSettingsBtn">Готово</button>
         </div>
-        <div class="modal-option" id="optShare">
-            <i class="fa fa-share-alt"></i>
-            <div class="opt-text">
-                <span class="title">Поделиться</span>
-                <span class="subtitle">Отправить через приложения</span>
-            </div>
+        <button type="button" class="btn-secondary" id="resetProjectBtn" style="color: var(--danger); border-color: rgba(239,68,68,0.35);">
+            <i class="fa-solid fa-trash-can"></i> Сбросить проект к демо
+        </button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="exportModal" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+    <div class="modal-card">
+        <h3 id="exportTitle" style="font-size:1.05rem;">
+            <i class="fa-solid fa-file-export" style="color:var(--accent);margin-right:6px;"></i>Экспорт проекта
+        </h3>
+        <p style="font-size:0.82rem;color:var(--text-muted);margin-top:-6px;">
+            Выберите способ сохранения
+        </p>
+        <div class="export-options">
+            <button type="button" class="export-option" data-export-action="download">
+                <div class="export-option-icon"><i class="fa-solid fa-file-arrow-down"></i></div>
+                <div class="export-option-text">
+                    <strong>Скачать ZIP</strong>
+                    <span>Сохранит архив в «Загрузки»</span>
+                </div>
+            </button>
+            <button type="button" class="export-option" data-export-action="save-as">
+                <div class="export-option-icon"><i class="fa-solid fa-floppy-disk"></i></div>
+                <div class="export-option-text">
+                    <strong>Сохранить как…</strong>
+                    <span>Выбрать папку для сохранения</span>
+                </div>
+            </button>
+            <button type="button" class="export-option" data-export-action="share">
+                <div class="export-option-icon"><i class="fa-solid fa-share-nodes"></i></div>
+                <div class="export-option-text">
+                    <strong>Поделиться</strong>
+                    <span>Telegram, почта, облако</span>
+                </div>
+            </button>
         </div>
-        <div class="modal-option" id="optImportZip">
-            <i class="fa fa-upload"></i>
-            <div class="opt-text">
-                <span class="title">Импорт ZIP</span>
-                <span class="subtitle">Загрузить проект из архива</span>
-            </div>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" id="closeExportModal">Отмена</button>
         </div>
     </div>
 </div>
 
-<!-- Модалка настроек (три точки) -->
-<div class="modal-overlay" id="settingsModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Настройки</h3>
-            <button class="icon-btn" id="btnCloseSettings"><i class="fa fa-times"></i></button>
-        </div>
-        <div class="theme-toggle">
-            <span>Тёмная тема</span>
-            <div class="toggle-switch" id="themeToggle"></div>
-        </div>
-        <div class="modal-option" id="optExportFromSettings">
-            <i class="fa fa-download"></i>
-            <div class="opt-text">
-                <span class="title">Экспорт / Импорт</span>
-                <span class="subtitle">Управление файлами проекта</span>
-            </div>
-        </div>
-        <div class="modal-option" id="optClearStorage">
-            <i class="fa fa-trash" style="color: var(--danger-color);"></i>
-            <div class="opt-text">
-                <span class="title" style="color: var(--danger-color);">Очистить хранилище</span>
-                <span class="subtitle">Удалить все данные</span>
-            </div>
+<div class="modal-overlay" id="confirmModal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+        <h3 id="confirmTitle" style="font-size:1.05rem;">Подтвердите действие</h3>
+        <p id="confirmText" style="font-size:0.9rem;color:var(--text-muted);"></p>
+        <div class="modal-actions">
+            <button type="button" class="btn-secondary" id="confirmCancel">Отмена</button>
+            <button type="button" class="btn-primary" id="confirmOk">Подтвердить</button>
         </div>
     </div>
 </div>
 
-<!-- Контекстное меню -->
-<div class="context-menu" id="contextMenu">
-    <div class="context-menu-item" id="ctxRename"><i class="fa fa-pen"></i> Переименовать</div>
-    <div class="context-menu-item" id="ctxDelete"><i class="fa fa-trash"></i> Удалить</div>
-</div>
+<div class="toast-container" id="toastContainer" aria-live="polite"></div>
+<input type="file" id="importFile" accept=".json,application/json" class="hidden-file-input">
 
-<!-- Тосты -->
-<div class="toast-container" id="toastContainer"></div>
-
-<!-- Скрытый input для импорта -->
-<input type="file" id="fileInputZip" accept=".zip" class="hidden">
+<!-- CodeMirror 5 JavaScript -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closetag.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
 
 <script>
-// ============================================
-// 1. ИНИЦИАЛИЗАЦИЯ И СОСТОЯНИЕ
-// ============================================
-const STORAGE_KEY = 'codedock_v3';
-const UI_KEY = 'codedock_ui_v3';
-const THEME_KEY = 'codedock_theme';
+    'use strict';
 
-let state = {
-    files: {
-        'index.html': '<!DOCTYPE html>\n<html>\n<head>\n    <title>Мой проект</title>\n</head>\n<body>\n    <h1>Привет, CodeDock!</h1>\n    <script src="script.js"><\/script>\n</body>\n</html>',
-        'style.css': 'body {\n    font-family: sans-serif;\n    background: #f0f0f0;\n}\nh1 {\n    color: #6200ee;\n}',
-        'script.js': 'console.log("Hello from CodeDock!");\n'
-    },
-    openFileIds: ['index.html', 'style.css', 'script.js'],
-    activeFileId: 'index.html'
-};
-
-let uiState = {
-    activePanel: null,
-    theme: 'light'
-};
-
-let cmView = null;
-let currentLongPressTimer = null;
-let contextTargetFile = null;
-let pushGuard = false;
-let fileMenuOpen = false;
-
-// OPFS Root
-let opfsRoot = null;
-
-// ============================================
-// 2. УТИЛИТЫ
-// ============================================
-function showToast(msg) {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = msg;
-    container.appendChild(toast);
-    setTimeout(() => {
-        toast.style.animation = 'toastIn 0.3s reverse forwards';
-        setTimeout(() => toast.remove(), 300);
-    }, 2500);
-}
-
-// CRC32 для ZIP
-function crc32(str) {
-    let crc = 0 ^ (-1);
-    for (let i = 0; i < str.length; i++) {
-        crc = (crc >>> 8) ^ (crc & 0xFF) ^ (str.charCodeAt(i) & 0xFF);
-        // Простая реализация (не эталонная, но для внутренних нужд сойдет)
-    }
-    // Используем более точную реализацию
-    return crc32_table(str);
-}
-
-const crc32_table = (function() {
-    let table = new Uint32Array(256);
-    for (let i = 0; i < 256; i++) {
-        let c = i;
-        for (let k = 0; k < 8; k++) {
-            c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
-        }
-        table[i] = c;
-    }
-    return function(str) {
-        let crc = 0 ^ (-1);
-        for (let i = 0; i < str.length; i++) {
-            crc = (crc >>> 8) ^ table[(crc ^ str.charCodeAt(i)) & 0xFF];
-        }
-        return (crc ^ (-1)) >>> 0;
+    const APP_VERSION = '3.0.0';
+    const STORAGE = {
+        current: 'codedock_v3',
+        backup: 'codedock_v3_backup',
+        legacyTree: 'codedock_tree_v2',
+        legacyActive: 'codedock_active_v2',
+        legacyTabs: 'codedock_open_tabs',
+        ui: 'codedock_ui_v3',
     };
-})();
+    const MAX_TABS = 12;
+    const SAVE_DEBOUNCE = 500;
 
-// ============================================
-// 3. РАБОТА С OPFS И LOCALSTORAGE
-// ============================================
-async function initOPFS() {
-    try {
-        if (navigator.storage && navigator.storage.getDirectory) {
-            opfsRoot = await navigator.storage.getDirectory();
-            console.log('OPFS initialized');
+    const $ = (id) => document.getElementById(id);
+
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, (c) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        }[c]));
+    }
+
+    function clone(value) { return JSON.parse(JSON.stringify(value)); }
+    function safeParse(json) { try { return JSON.parse(json); } catch (e) { return null; } }
+    function genId() {
+        if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+        return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    }
+    function formatTime(date = new Date()) { return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); }
+    function debounce(fn, wait) {
+        let timer = null;
+        const wrapped = (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), wait); };
+        wrapped.flush = (...args) => { clearTimeout(timer); fn(...args); };
+        return wrapped;
+    }
+
+    let cmView = null;
+
+    function createEditor() {
+        try {
+            cmView = CodeMirror.fromTextArea($('codeEditor'), {
+                lineNumbers: true,
+                mode: "htmlmixed",
+                theme: "eclipse",
+                tabSize: 2,
+                indentUnit: 2,
+                lineWrapping: true,
+                autoCloseBrackets: true,
+                autoCloseTags: true,
+                matchBrackets: true,
+                styleActiveLine: true
+            });
+
+            cmView.setSize("100%", "100%");
+
+            cmView.on("change", () => {
+                const file = findItemById(fileSystem, activeFileId);
+                if (file) file.content = cmView.getValue();
+                scheduleSave();
+                $('linesCountText').textContent = `Строк: ${cmView.lineCount()}`;
+                refreshSearchResults();
+            });
+            
+            setTimeout(() => { cmView.refresh(); }, 100);
+
+            window.addEventListener('resize', () => {
+                if (cmView) cmView.refresh();
+            });
+        } catch (error) {
+            console.error("CodeMirror failed to load:", error);
+            $('codeEditor').style.display = 'block';
+            $('codeEditor').value = "Ошибка загрузки редактора: " + error.message;
         }
-    } catch (e) {
-        console.warn('OPFS not available, using localStorage fallback');
     }
-}
 
-async function saveToOPFS(data) {
-    if (!opfsRoot) return false;
-    try {
-        const fileHandle = await opfsRoot.getFileHandle('codedock_state.json', { create: true });
-        const writable = await fileHandle.createWritable();
-        await writable.write(JSON.stringify(data));
-        await writable.close();
-        return true;
-    } catch (e) {
-        console.error('OPFS save error:', e);
-        return false;
+    function getLanguageExtension(fileName) {
+        const ext = (fileName || '').split('.').pop().toLowerCase();
+        switch (ext) {
+            case 'html': return 'htmlmixed';
+            case 'css': return 'css';
+            case 'js': return 'javascript';
+            case 'json': return { name: "javascript", json: true };
+            default: return 'null';
+        }
     }
-}
 
-async function loadFromOPFS() {
-    if (!opfsRoot) return null;
-    try {
-        const fileHandle = await opfsRoot.getFileHandle('codedock_state.json');
-        const file = await fileHandle.getFile();
-        const text = await file.text();
-        return JSON.parse(text);
-    } catch (e) {
-        console.warn('OPFS load error (file may not exist):', e);
+    function setEditorLanguage(fileName) {
+        if (!cmView) return;
+        cmView.setOption("mode", getLanguageExtension(fileName));
+    }
+
+    function setEditorContent(content) {
+        if (!cmView) return;
+        cmView.setValue(content || '');
+    }
+
+    function getEditorContent() {
+        return cmView ? cmView.getValue() : '';
+    }
+
+    const DEFAULT_PROJECT = [
+        { id: 'demo-index', name: 'index.html', type: 'file', content: '<!DOCTYPE html>\n<html lang="ru">\n<head>\n  <meta charset="UTF-8">\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <div class="card">\n    <h1>CodeDock IDE</h1>\n    <p>Нажми кнопку ниже для проверки JS</p>\n    <button onclick="sayHi()">Нажми меня</button>\n  </div>\n  <script src="script.js"><\/script>\n</body>\n</html>' },
+        { id: 'demo-style', name: 'style.css', type: 'file', content: 'body {\n  margin: 0;\n  min-height: 100vh;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  background: #f8fafc;\n  color: #0f172a;\n  font-family: sans-serif;\n}\n.card {\n  background: #fff;\n  padding: 24px;\n  border-radius: 16px;\n  text-align: center;\n  border: 1px solid #0ea5e9;\n  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.15);\n}\nbutton {\n  background: #0ea5e9;\n  color: #fff;\n  border: none;\n  padding: 10px 18px;\n  border-radius: 10px;\n  font-size: 16px;\n  margin-top: 10px;\n}' },
+        { id: 'demo-script', name: 'script.js', type: 'file', content: 'function sayHi() {\n  console.log("Привет из CodeDock!");\n  console.warn("Это предупреждение");\n  console.error("А это тестовая ошибка");\n}' },
+        { id: 'demo-data', name: 'data', type: 'folder', isOpen: true, children: [{ id: 'demo-json', name: 'data.json', type: 'file', content: '{\n  "app": "CodeDock",\n  "version": "3.0"\n}' }] },
+    ];
+
+    function normalizeTree(input) {
+        const tree = Array.isArray(input) ? input : (input && Array.isArray(input.tree) ? input.tree : null);
+        if (!tree) return null;
+        const seen = new Set();
+        const walk = (items) => {
+            if (!Array.isArray(items)) return null;
+            const result = [];
+            for (const item of items) {
+                if (!item || typeof item !== 'object') return null;
+                let name = typeof item.name === 'string' ? item.name.trim() : '';
+                if (!name) return null;
+                name = name.replace(/[/\\]/g, '-');
+                const type = item.type === 'folder' ? 'folder' : 'file';
+                const node = { id: typeof item.id === 'string' && item.id ? item.id : genId(), name, type };
+                if (seen.has(node.id)) node.id = genId();
+                seen.add(node.id);
+                if (type === 'folder') {
+                    const children = walk(item.children || []);
+                    if (children === null) return null;
+                    node.isOpen = Boolean(item.isOpen);
+                    node.children = children;
+                } else {
+                    node.content = typeof item.content === 'string' ? item.content : '';
+                }
+                result.push(node);
+            }
+            return result;
+        };
+        return walk(tree);
+    }
+
+    function readStoredProject() {
+        const attempts = [[STORAGE.current, 'current'], [STORAGE.backup, 'backup'], [STORAGE.legacyTree, 'legacy']];
+        for (const [key, source] of attempts) {
+            const raw = localStorage.getItem(key);
+            if (!raw) continue;
+            const parsed = safeParse(raw);
+            const tree = normalizeTree(parsed);
+            if (tree && tree.length) return { tree, source };
+        }
         return null;
     }
-}
 
-async function saveState() {
-    // 1. Всегда сохраняем в localStorage (fallback)
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (e) { console.warn('localStorage save error', e); }
-    
-    // 2. Дублируем в OPFS
-    await saveToOPFS(state);
-}
+    let fileSystem = clone(DEFAULT_PROJECT);
+    let activeFileId = null;
+    let openFileIds = [];
+    let lastSavedAt = null;
+    let lastSavedTreeHash = '';
 
-async function loadState() {
-    // 1. Пробуем OPFS
-    let data = await loadFromOPFS();
-    if (data && data.files) {
-        state = data;
-        return;
-    }
-    // 2. Fallback на localStorage
-    try {
-        const stored = localStorage.getItem(STORAGE_KEY);
+    function loadProject() {
+        let stored = null;
+        try { stored = readStoredProject(); } catch (e) { stored = null; }
         if (stored) {
-            const parsed = JSON.parse(stored);
-            if (parsed.files) {
-                state = parsed;
+            fileSystem = stored.tree;
+            if (stored.source === 'backup') toast('Загружена резервная копия.', { type: 'warn' });
+            if (stored.source === 'legacy') toast('Проект перенесен.', { type: 'success' });
+        }
+
+        const ui = safeParse(localStorage.getItem(STORAGE.ui) || 'null') || {};
+        const files = getAllFiles(fileSystem);
+        const savedActive = ui.active || localStorage.getItem(STORAGE.legacyActive);
+        const savedTabs = Array.isArray(ui.tabs) ? ui.tabs : safeParse(localStorage.getItem(STORAGE.legacyTabs) || 'null');
+
+        openFileIds = (Array.isArray(savedTabs) ? savedTabs : []).filter((id) => files.some((file) => file.id === id)).slice(0, MAX_TABS);
+
+        if (savedActive && files.some((file) => file.id === savedActive)) activeFileId = savedActive;
+        else if (openFileIds.length) activeFileId = openFileIds[0];
+        else if (files.length) activeFileId = files[0].id;
+
+        if (activeFileId && !openFileIds.includes(activeFileId)) openFileIds.push(activeFileId);
+        lastSavedTreeHash = hashTree(fileSystem);
+    }
+
+    function hashTree(tree) {
+        const json = JSON.stringify(tree);
+        let hash = 0;
+        for (let i = 0; i < json.length; i += 1) hash = (hash * 31 + json.charCodeAt(i)) | 0;
+        return String(hash);
+    }
+
+    function setSaveStatus(state, text) {
+        const el = $('saveStatus');
+        el.className = `save-status ${state || ''}`;
+        el.innerHTML = text || '';
+    }
+
+    function saveNow(force = false) {
+        const serialized = JSON.stringify({ v: 3, tree: fileSystem, active: activeFileId, tabs: openFileIds, savedAt: Date.now() });
+        const digest = hashTree(fileSystem);
+        if (!force && digest === lastSavedTreeHash && serialized.length > 0) return true;
+
+        setSaveStatus('saving', '<i class="fa-solid fa-circle-notch fa-spin"></i> Сохранение…');
+        try {
+            const previous = localStorage.getItem(STORAGE.current);
+            if (previous) localStorage.setItem(STORAGE.backup, previous);
+            localStorage.setItem(STORAGE.current, serialized);
+            localStorage.setItem(STORAGE.ui, JSON.stringify({ active: activeFileId, tabs: openFileIds, settings: uiSettings }));
+            lastSavedAt = new Date();
+            lastSavedTreeHash = digest;
+            setSaveStatus('saved', `<i class="fa-solid fa-check"></i> Сохранено в ${formatTime(lastSavedAt)}`);
+            return true;
+        } catch (error) {
+            setSaveStatus('error', '<i class="fa-solid fa-triangle-exclamation"></i> Не сохранено');
+            toast(`Ошибка сохранения: ${error.message}`, { type: 'error' });
+            return false;
+        }
+    }
+    const scheduleSave = debounce(() => saveNow(), SAVE_DEBOUNCE);
+
+    function findItemById(items, id) {
+        for (const item of items) {
+            if (item.id === id) return item;
+            if (item.children) {
+                const found = findItemById(item.children, id);
+                if (found) return found;
             }
         }
-    } catch (e) { console.warn('localStorage load error', e); }
-}
-
-// ============================================
-// 4. УПРАВЛЕНИЕ ФАЙЛАМИ (ДЕРЕВО)
-// ============================================
-function renderFileList() {
-    const list = document.getElementById('fileMenuList');
-    if (!list) return;
-    list.innerHTML = '';
-    const fileNames = Object.keys(state.files);
-    if (fileNames.length === 0) {
-        list.innerHTML = '<div style="padding:20px;text-align:center;opacity:0.5;">Нет файлов</div>';
-        return;
+        return null;
     }
-    fileNames.sort().forEach(name => {
-        const item = document.createElement('div');
-        item.className = 'file-item' + (state.activeFileId === name ? ' active' : '');
-        item.dataset.file = name;
-        item.innerHTML = `
-            <span><i class="fa fa-file-code"></i> ${name}</span>
-            <div class="actions">
-                <i class="fa fa-ellipsis-v" data-action="menu" data-file="${name}"></i>
-            </div>
-        `;
-        item.addEventListener('click', (e) => {
-            if (e.target.closest('[data-action="menu"]')) return;
-            openFile(name);
-            closeFileMenu();
-        });
-        // Long press / context menu
-        item.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            showContextMenu(e.clientX, e.clientY, name);
-        });
-        let touchTimer;
-        item.addEventListener('touchstart', (e) => {
-            touchTimer = setTimeout(() => {
-                showContextMenu(e.touches[0].clientX, e.touches[0].clientY, name);
-            }, 600);
-        });
-        item.addEventListener('touchend', () => clearTimeout(touchTimer));
-        item.addEventListener('touchmove', () => clearTimeout(touchTimer));
-        // Double tap
-        let lastTap = 0;
-        item.addEventListener('touchend', (e) => {
-            const currentTime = new Date().getTime();
-            const tapLength = currentTime - lastTap;
-            if (tapLength < 300 && tapLength > 0) {
-                showContextMenu(e.changedTouches[0].clientX, e.changedTouches[0].clientY, name);
+
+    function getParent(items, id, parent = null) {
+        for (const item of items) {
+            if (item.id === id) return parent;
+            if (item.children) {
+                const found = getParent(item.children, id, item);
+                if (found !== null) return found;
             }
-            lastTap = currentTime;
+        }
+        return null;
+    }
+
+    function getAllFiles(items, list = []) {
+        items.forEach((item) => {
+            if (item.type === 'file') list.push(item);
+            else if (item.children) getAllFiles(item.children, list);
         });
-        list.appendChild(item);
-    });
-}
-
-function showContextMenu(x, y, fileName) {
-    contextTargetFile = fileName;
-    const menu = document.getElementById('contextMenu');
-    menu.style.left = x + 'px';
-    menu.style.top = y + 'px';
-    menu.classList.add('open');
-    // Закрытие по клику вне
-    setTimeout(() => {
-        document.addEventListener('click', closeContextMenuOnce);
-    }, 10);
-}
-
-function closeContextMenuOnce(e) {
-    const menu = document.getElementById('contextMenu');
-    if (!menu.contains(e.target)) {
-        menu.classList.remove('open');
-        document.removeEventListener('click', closeContextMenuOnce);
+        return list;
     }
-}
 
-function closeContextMenu() {
-    document.getElementById('contextMenu').classList.remove('open');
-}
-
-function openFile(fileName) {
-    if (!state.files[fileName]) return;
-    if (!state.openFileIds.includes(fileName)) {
-        state.openFileIds.push(fileName);
+    function siblingsOf(parentId) {
+        if (!parentId) return fileSystem;
+        const parent = findItemById(fileSystem, parentId);
+        return parent && parent.children ? parent.children : [];
     }
-    state.activeFileId = fileName;
-    renderTabs();
-    updateEditorContent();
-    saveState();
-}
 
-function createFile() {
-    const name = prompt('Имя нового файла (с расширением):');
-    if (!name) return;
-    if (state.files[name]) {
-        showToast('Файл уже существует');
-        return;
+    function nameExists(parentId, name, ignoreId) {
+        return siblingsOf(parentId).some((item) => item.name.toLowerCase() === name.toLowerCase() && item.id !== ignoreId);
     }
-    state.files[name] = '';
-    openFile(name);
-    renderFileList();
-    showToast('Файл создан');
-}
 
-function deleteFile(fileName) {
-    if (!confirm(`Удалить файл "${fileName}"?`)) return;
-    delete state.files[fileName];
-    state.openFileIds = state.openFileIds.filter(id => id !== fileName);
-    if (state.activeFileId === fileName) {
-        state.activeFileId = state.openFileIds.length > 0 ? state.openFileIds[0] : null;
-    }
-    renderTabs();
-    renderFileList();
-    if (state.activeFileId) {
-        updateEditorContent();
-    } else {
-        if (cmView) {
-            cmView.setValue('');
-            cmView.setOption('mode', 'htmlmixed');
-        }
-    }
-    saveState();
-    showToast('Файл удалён');
-}
-
-function renameFile(oldName) {
-    const newName = prompt('Новое имя файла:', oldName);
-    if (!newName || newName === oldName) return;
-    if (state.files[newName]) {
-        showToast('Файл с таким именем уже существует');
-        return;
-    }
-    state.files[newName] = state.files[oldName];
-    delete state.files[oldName];
-    state.openFileIds = state.openFileIds.map(id => id === oldName ? newName : id);
-    if (state.activeFileId === oldName) state.activeFileId = newName;
-    renderTabs();
-    renderFileList();
-    updateEditorContent();
-    saveState();
-    showToast('Файл переименован');
-}
-
-// ============================================
-// 5. РЕДАКТОР (CodeMirror)
-// ============================================
-function initEditor() {
-    const textarea = document.getElementById('codeEditor');
-    cmView = CodeMirror.fromTextArea(textarea, {
-        mode: 'htmlmixed',
-        theme: 'material-darker',
-        lineNumbers: true,
-        autoCloseBrackets: true,
-        matchBrackets: true,
-        lineWrapping: true,
-        indentUnit: 4,
-        tabSize: 4,
-    });
-    cmView.setSize("100%", "100%");
-    cmView.on('change', () => {
-        if (state.activeFileId && state.files[state.activeFileId] !== undefined) {
-            state.files[state.activeFileId] = cmView.getValue();
-            saveState();
-        }
-    });
-}
-
-function updateEditorContent() {
-    if (!cmView) return;
-    if (state.activeFileId && state.files[state.activeFileId] !== undefined) {
-        cmView.setValue(state.files[state.activeFileId]);
-        // Определяем режим
-        const ext = state.activeFileId.split('.').pop();
-        let mode = 'htmlmixed';
-        if (ext === 'js') mode = 'javascript';
-        else if (ext === 'css') mode = 'css';
-        else if (ext === 'html') mode = 'htmlmixed';
-        cmView.setOption('mode', mode);
-        document.getElementById('editorWrapper').style.display = 'flex';
-    } else {
-        cmView.setValue('');
-        document.getElementById('editorWrapper').style.display = 'flex';
-    }
-}
-
-// ============================================
-// 6. ВКЛАДКИ
-// ============================================
-function renderTabs() {
-    const container = document.getElementById('tabsContainer');
-    if (!container) return;
-    container.innerHTML = '';
-    state.openFileIds.forEach(id => {
-        const tab = document.createElement('div');
-        tab.className = 'tab' + (state.activeFileId === id ? ' active' : '');
-        tab.innerHTML = `
-            <span>${id}</span>
-            <i class="fa fa-times close-tab" data-file="${id}"></i>
-        `;
-        tab.addEventListener('click', (e) => {
-            if (e.target.closest('.close-tab')) {
-                closeTab(e.target.closest('.close-tab').dataset.file);
-                return;
+    function removeItemById(id) {
+        const remove = (items, parentId) => {
+            const index = items.findIndex((item) => item.id === id);
+            if (index >= 0) { const [removed] = items.splice(index, 1); return { parentId, index, removed }; }
+            for (const item of items) {
+                if (item.children) {
+                    const found = remove(item.children, item.id);
+                    if (found) return found;
+                }
             }
-            openFile(id);
+            return null;
+        };
+        return remove(fileSystem, null);
+    }
+
+    function insertItem(item, parentId, index) {
+        if (!parentId) { fileSystem.splice(index, 0, item); return true; }
+        const parent = findItemById(fileSystem, parentId);
+        if (!parent || !parent.children) return false;
+        parent.children.splice(index, 0, item);
+        return true;
+    }
+
+    function toast(message, options = {}) {
+        const container = $('toastContainer');
+        const node = document.createElement('div');
+        node.className = `toast ${options.type || ''}`;
+        const text = document.createElement('span');
+        text.textContent = message;
+        node.appendChild(text);
+        let timer = null;
+        const remove = () => { clearTimeout(timer); node.remove(); };
+        if (options.action) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = options.action.label;
+            button.addEventListener('click', () => { options.action.onClick(); remove(); });
+            node.appendChild(button);
+        }
+        container.appendChild(node);
+        timer = setTimeout(remove, options.duration || 4200);
+        return remove;
+    }
+
+    function confirmAction(title, text) {
+        return new Promise((resolve) => {
+            const modal = $('confirmModal');
+            $('confirmTitle').textContent = title;
+            $('confirmText').textContent = text;
+            modal.classList.add('open');
+            pushGuard();
+            const cleanup = (result) => {
+                modal.classList.remove('open');
+                $('confirmOk').removeEventListener('click', onOk);
+                $('confirmCancel').removeEventListener('click', onCancel);
+                resolve(result);
+            };
+            const onOk = () => cleanup(true);
+            const onCancel = () => cleanup(false);
+            $('confirmOk').addEventListener('click', onOk);
+            $('confirmCancel').addEventListener('click', onCancel);
         });
-        container.appendChild(tab);
-    });
-}
-
-function closeTab(fileName) {
-    state.openFileIds = state.openFileIds.filter(id => id !== fileName);
-    if (state.activeFileId === fileName) {
-        state.activeFileId = state.openFileIds.length > 0 ? state.openFileIds[0] : null;
     }
-    renderTabs();
-    updateEditorContent();
-    saveState();
-}
 
-// ============================================
-// 7. ПОИСК И ЗАМЕНА
-// ============================================
-function initSearch() {
-    document.getElementById('btnSearch').onclick = () => {
-        document.getElementById('searchPanel').classList.toggle('open');
-    };
-    document.getElementById('btnCloseSearch').onclick = () => {
-        document.getElementById('searchPanel').classList.remove('open');
-    };
-    document.getElementById('btnSearchNext').onclick = () => goToMatch(1);
-    document.getElementById('btnSearchPrev').onclick = () => goToMatch(-1);
-    document.getElementById('btnReplace').onclick = () => {
-        const search = document.getElementById('searchInput').value;
-        const replace = document.getElementById('replaceInput').value;
-        if (!search || !state.activeFileId) return;
-        const content = state.files[state.activeFileId];
-        const regex = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-        const newContent = content.replace(regex, replace);
-        state.files[state.activeFileId] = newContent;
-        cmView.setValue(newContent);
-        saveState();
-        showToast('Заменено');
-    };
-}
+    const tabsBar = $('tabsBar');
+    const fileTreeEl = $('fileTree');
+    const statsTextEl = $('statsText');
 
-function goToMatch(dir) {
-    const search = document.getElementById('searchInput').value;
-    if (!search) return;
-    const cm = cmView;
-    const cursor = cm.getSearchCursor(search, dir > 0 ? cm.getCursor('to') : cm.getCursor('from'), { caseFold: true, multiline: true });
-    if (cursor.findNext()) {
-        cm.setSelection(cursor.from(), cursor.to());
-        cm.scrollIntoView({ from: cursor.from(), to: cursor.to() }, 50);
-    } else {
-        // Сброс поиска с начала
-        const cursor2 = cm.getSearchCursor(search, null, { caseFold: true, multiline: true });
-        if (cursor2.findNext()) {
-            cm.setSelection(cursor2.from(), cursor2.to());
-            cm.scrollIntoView({ from: cursor2.from(), to: cursor2.to() }, 50);
-        } else {
-            showToast('Совпадений не найдено');
-        }
-    }
-    // Фокус не улетает
-}
-
-// ============================================
-// 8. ПРЕДПРОСМОТР И КОНСОЛЬ
-// ============================================
-let consoleShim = `
-<script>
-(function(){
-    var _log = console.log;
-    console.log = function() {
-        window.parent.postMessage({type: 'CONSOLE_SHIM', data: Array.from(arguments).map(String).join(' ')}, '*');
-        _log.apply(console, arguments);
-    };
-    window.onerror = function(msg, url, line, col) {
-        window.parent.postMessage({type: 'CONSOLE_SHIM', data: 'Error: ' + msg + ' (line ' + line + ')'}, '*');
-    };
-})();
-<\/script>
-`;
-
-window.addEventListener('message', (e) => {
-    if (e.data && e.data.type === 'CONSOLE_SHIM') {
-        const output = document.getElementById('consoleOutput');
-        const line = document.createElement('div');
-        line.textContent = e.data.data;
-        output.appendChild(line);
-        output.scrollTop = output.scrollHeight;
-    }
-});
-
-function runPreview() {
-    if (!state.activeFileId || !state.files[state.activeFileId]) {
-        showToast('Нет активного файла');
-        return;
-    }
-    // Собираем index.html
-    let html = state.files['index.html'] || '';
-    // Если открыт не index, но есть index, используем его, иначе текущий
-    const currentFile = state.activeFileId;
-    if (currentFile.endsWith('.html')) {
-        html = state.files[currentFile];
-    } else if (state.files['index.html']) {
-        html = state.files['index.html'];
-    }
-    
-    // Внедряем css и js (если есть)
-    if (state.files['style.css']) {
-        html = html.replace('</head>', `<style>${state.files['style.css']}</style></head>`);
-    }
-    if (state.files['script.js']) {
-        html = html.replace('</body>', `<script>${state.files['script.js']}<\/script></body>`);
-    }
-    
-    // Добавляем консольный шим
-    html = html.replace('<head>', '<head>' + consoleShim);
-    
-    document.getElementById('previewIframe').srcdoc = html;
-    document.getElementById('previewContainer').classList.add('open');
-    document.getElementById('consolePanel').classList.remove('open');
-    document.getElementById('consoleOutput').innerHTML = '';
-    
-    pushGuard = true;
-    history.pushState({panel: 'preview'}, '');
-}
-
-function closePreview() {
-    document.getElementById('previewContainer').classList.remove('open');
-    if (pushGuard) {
-        pushGuard = false;
-        history.back();
-    }
-}
-
-// ============================================
-// 9. ZIP ЭКСПОРТ / ИМПОРТ
-// ============================================
-function downloadBlob(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
-
-function generateZipBlob() {
-    // Используем библиотеку JSZip, так как она подключена
-    const zip = new JSZip();
-    Object.keys(state.files).forEach(name => {
-        zip.file(name, state.files[name] || '');
-    });
-    return zip.generateAsync({type: 'blob'});
-}
-
-async function exportZip() {
-    try {
-        const blob = await generateZipBlob();
-        downloadBlob(blob, 'codedock_project.zip');
-        showToast('ZIP скачан');
-    } catch (e) {
-        console.error(e);
-        showToast('Ошибка при создании ZIP');
-    }
-}
-
-async function importZip(file) {
-    try {
-        const zip = await JSZip.loadAsync(file);
-        const newFiles = {};
-        for (const [name, zipEntry] of Object.entries(zip.files)) {
-            if (zipEntry.dir) continue;
-            // Игнорируем системные папки
-            if (name.startsWith('__MACOSX') || name.startsWith('.')) continue;
-            const content = await zipEntry.async('string');
-            newFiles[name] = content;
-        }
-        if (Object.keys(newFiles).length === 0) {
-            showToast('Архив пуст или не содержит файлов');
+    function syncEditorFromModel() {
+        const file = findItemById(fileSystem, activeFileId);
+        if (!file) {
+            setEditorContent('');
+            setEditorLanguage('plaintext');
+            $('linesCountText').textContent = 'Строк: 0';
             return;
         }
-        // Заменяем или добавляем
-        state.files = { ...state.files, ...newFiles };
-        // Если index.html появился, обновим
-        if (newFiles['index.html'] && !state.openFileIds.includes('index.html')) {
-            state.openFileIds.push('index.html');
+        setEditorContent(file.content || '');
+        setEditorLanguage(file.name);
+    }
+
+    function renderTabs() {
+        const files = getAllFiles(fileSystem);
+        openFileIds = openFileIds.filter((id) => files.some((file) => file.id === id)).slice(0, MAX_TABS);
+        tabsBar.innerHTML = '';
+
+        openFileIds.forEach((id) => {
+            const file = files.find((item) => item.id === id);
+            if (!file) return;
+
+            const tab = document.createElement('div');
+            tab.className = `tab-chip ${file.id === activeFileId ? 'active' : ''}`;
+            tab.innerHTML = `
+                ${getFileIcon(file.name)}
+                <span>${escapeHtml(file.name)}</span>
+                <div class="tab-close" role="button" tabindex="0" title="Закрыть" aria-label="Закрыть ${escapeHtml(file.name)}"><i class="fa-solid fa-xmark"></i></div>
+            `;
+
+            tab.addEventListener('click', (event) => {
+                if (event.target.closest('.tab-close')) return;
+                openFile(file.id);
+            });
+
+            const close = tab.querySelector('.tab-close');
+            const closeTab = (event) => {
+                event.stopPropagation();
+                closeFile(file.id);
+            };
+            close.addEventListener('click', closeTab);
+            close.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') closeTab(event);
+            });
+
+            tabsBar.appendChild(tab);
+        });
+    }
+
+    function openFile(id, options = {}) {
+        const file = findItemById(fileSystem, id);
+        if (!file || file.type !== 'file') return;
+        if (activeFileId !== id) {
+            const current = findItemById(fileSystem, activeFileId);
+            if (current) current.content = getEditorContent();
         }
-        if (!state.activeFileId && state.openFileIds.length > 0) {
-            state.activeFileId = state.openFileIds[0];
+        activeFileId = id;
+        if (!openFileIds.includes(id)) {
+            openFileIds.push(id);
+            if (openFileIds.length > MAX_TABS) openFileIds.shift();
         }
-        renderFileList();
+        saveNow();
+        renderEditorAndTabs();
+        if (options.closeDrawer !== false) closeDrawer();
+    }
+
+    function closeFile(id) {
+        const current = findItemById(fileSystem, activeFileId);
+        if (current) current.content = getEditorContent();
+        openFileIds = openFileIds.filter((fileId) => fileId !== id);
+        if (activeFileId === id) {
+            activeFileId = openFileIds.length ? openFileIds[0] : null;
+        }
+        saveNow();
+        renderEditorAndTabs();
+    }
+
+    function renderEditorAndTabs() {
         renderTabs();
-        updateEditorContent();
-        saveState();
-        showToast('Импорт завершён. Файлы добавлены.');
-    } catch (e) {
-        console.error(e);
-        showToast('Ошибка при импорте ZIP');
+        syncEditorFromModel();
+        renderTree();
+        if (cmView) setTimeout(() => cmView.refresh(), 10);
     }
-}
 
-// ============================================
-// 10. НАСТРОЙКИ И ТЕМА
-// ============================================
-function applyTheme(theme) {
-    document.body.dataset.theme = theme;
-    const toggle = document.getElementById('themeToggle');
-    if (toggle) {
-        if (theme === 'dark') toggle.classList.add('active');
-        else toggle.classList.remove('active');
-    }
-    localStorage.setItem(THEME_KEY, theme);
-    if (cmView) {
-        cmView.setOption('theme', theme === 'dark' ? 'material-darker' : 'default');
-    }
-}
+    const searchPanel = $('searchPanel');
+    const searchInput = $('searchInput');
+    const replaceInput = $('replaceInput');
+    const searchCount = $('searchCount');
+    let searchMatches = [];
+    let searchIndex = -1;
 
-function initTheme() {
-    const saved = localStorage.getItem(THEME_KEY) || 'light';
-    applyTheme(saved);
-    document.getElementById('themeToggle').addEventListener('click', () => {
-        const current = document.body.dataset.theme;
-        const next = current === 'dark' ? 'light' : 'dark';
-        applyTheme(next);
-    });
-}
+    function openSearch() {
+        if (!cmView) { toast('Сначала откройте файл.', { type: 'warn' }); return; }
+        searchPanel.classList.add('open');
+        pushGuard();
+        const selected = cmView.getSelection();
+        if (selected && !selected.includes('\n')) searchInput.value = selected;
+        searchInput.focus();
+        searchInput.select();
+        refreshSearchResults();
+    }
 
-// ============================================
-// 11. УПРАВЛЕНИЕ ПАНЕЛЯМИ И ИСТОРИЕЙ
-// ============================================
-function closeTopPanel() {
-    // Приоритет: контекстное меню, модалки, панели
-    if (document.getElementById('contextMenu').classList.contains('open')) {
-        closeContextMenu();
-        return true;
-    }
-    const modals = ['exportModal', 'settingsModal'];
-    for (const id of modals) {
-        const el = document.getElementById(id);
-        if (el && el.classList.contains('open')) {
-            el.classList.remove('open');
-            return true;
-        }
-    }
-    const preview = document.getElementById('previewContainer');
-    if (preview.classList.contains('open')) {
-        closePreview();
-        return true;
-    }
-    const consolePanel = document.getElementById('consolePanel');
-    if (consolePanel.classList.contains('open')) {
-        consolePanel.classList.remove('open');
-        return true;
-    }
-    const searchPanel = document.getElementById('searchPanel');
-    if (searchPanel.classList.contains('open')) {
+    function closeSearch() {
+        if (!searchPanel.classList.contains('open')) return;
         searchPanel.classList.remove('open');
-        return true;
+        if (cmView) cmView.focus();
     }
-    if (fileMenuOpen) {
-        closeFileMenu();
-        return true;
-    }
-    return false;
-}
 
-function closeFileMenu() {
-    document.getElementById('fileMenuOverlay').classList.remove('open');
-    fileMenuOpen = false;
-}
-
-function openFileMenu() {
-    document.getElementById('fileMenuOverlay').classList.add('open');
-    fileMenuOpen = true;
-    renderFileList();
-}
-
-window.addEventListener('popstate', (e) => {
-    if (closeTopPanel()) {
-        // Если закрыли панель, pushGuard сбрасываем, чтобы не уходить назад
-        pushGuard = false;
-        // Не даем уйти со страницы
-        history.pushState({}, '');
-    } else {
-        // Если нечего закрывать, разрешаем уйти
-        // Но если pushGuard был, мы не должны блокировать
-        if (pushGuard) {
-            pushGuard = false;
-            history.pushState({}, '');
-        }
-    }
-});
-
-// ============================================
-// 12. ЖЕСТЫ (свайпы)
-// ============================================
-function initGestures() {
-    const mainArea = document.querySelector('.main-area');
-    let touchStartX = 0;
-    let touchStartY = 0;
-    mainArea.addEventListener('touchstart', (e) => {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-    }, {passive: true});
-    mainArea.addEventListener('touchend', (e) => {
-        const dx = e.changedTouches[0].clientX - touchStartX;
-        const dy = e.changedTouches[0].clientY - touchStartY;
-        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
-            if (dx > 0) {
-                // Свайп вправо -> открыть меню
-                openFileMenu();
-            } else {
-                // Свайп влево -> закрыть
-                closeFileMenu();
-            }
-        }
-    }, {passive: true});
-}
-
-// ============================================
-// 13. ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ
-// ============================================
-async function initApp() {
-    // 1. OPFS
-    await initOPFS();
-    // 2. Загрузка состояния
-    await loadState();
-    
-    // 3. Инициализация UI
-    initEditor();
-    initTheme();
-    renderTabs();
-    renderFileList();
-    updateEditorContent();
-    initSearch();
-    initGestures();
-
-    // 4. Обработчики кнопок
-    document.getElementById('btnSave').onclick = async () => {
-        await saveState();
-        showToast('Сохранено в OPFS и localStorage');
-    };
-
-    document.getElementById('btnSettings').onclick = () => {
-        document.getElementById('settingsModal').classList.add('open');
-    };
-    document.getElementById('btnCloseSettings').onclick = () => {
-        document.getElementById('settingsModal').classList.remove('open');
-    };
-    document.getElementById('optExportFromSettings').onclick = () => {
-        document.getElementById('settingsModal').classList.remove('open');
-        document.getElementById('exportModal').classList.add('open');
-    };
-    document.getElementById('optClearStorage').onclick = async () => {
-        if (confirm('Удалить все данные? Это действие необратимо.')) {
-            localStorage.removeItem(STORAGE_KEY);
-            if (opfsRoot) {
-                try {
-                    await opfsRoot.removeEntry('codedock_state.json');
-                } catch(e) {}
-            }
-            location.reload();
-        }
-    };
-
-    // Экспорт
-    document.getElementById('btnRun').onclick = () => {
-        runPreview();
-        pushGuard = true;
-        history.pushState({panel: 'preview'}, '');
-    };
-    document.getElementById('btnCloseExportModal').onclick = () => {
-        document.getElementById('exportModal').classList.remove('open');
-    };
-    document.getElementById('optDownloadZip').onclick = () => {
-        exportZip();
-        document.getElementById('exportModal').classList.remove('open');
-    };
-    document.getElementById('optSaveAs').onclick = async () => {
+    function buildSearchStrings(rawQuery, rawText) {
+        let query = rawQuery;
+        let text = rawText;
         try {
-            if (!window.showSaveFilePicker) {
-                showToast('Приносим прощения, этот способ в вашем случае не работает. Попробуйте другой.');
-                return;
+            if (typeof rawQuery.normalize === 'function') {
+                const nq = rawQuery.normalize('NFC');
+                const nt = rawText.normalize('NFC');
+                if (nq.length === rawQuery.length && nt.length === rawText.length) {
+                    query = nq;
+                    text = nt;
+                }
             }
-            const blob = await generateZipBlob();
+        } catch (e) { }
+
+        const lowerQuery = query.toLowerCase();
+        const lowerText = text.toLowerCase();
+        if (lowerQuery.length === query.length && lowerText.length === text.length) {
+            return { haystack: lowerText, needle: lowerQuery, lengthSafe: true, queryLength: query.length };
+        }
+        return { haystack: text, needle: query, lengthSafe: false, queryLength: query.length };
+    }
+
+    function computeMatches() {
+        const rawQuery = searchInput.value;
+        const rawText = getEditorContent();
+        if (!rawQuery) return [];
+
+        const { haystack, needle, queryLength } = buildSearchStrings(rawQuery, rawText);
+        if (!needle) return [];
+
+        const matches = [];
+        let index = 0;
+        while (index <= haystack.length) {
+            const found = haystack.indexOf(needle, index);
+            if (found === -1) break;
+            matches.push({ start: found, end: found + queryLength });
+            index = found + Math.max(1, needle.length);
+        }
+        return matches;
+    }
+
+    function refreshSearchResults() {
+        if (!searchPanel.classList.contains('open')) return;
+        searchMatches = computeMatches();
+        if (!searchMatches.length) { searchIndex = -1; searchCount.textContent = '0/0'; return; }
+        if (searchIndex < 0 || searchIndex >= searchMatches.length) {
+            const caret = cmView ? cmView.indexFromPos(cmView.getCursor()) : 0;
+            const next = searchMatches.findIndex((match) => match.start >= caret);
+            searchIndex = next === -1 ? 0 : next;
+        }
+        searchCount.textContent = `${searchIndex + 1}/${searchMatches.length}`;
+    }
+
+    function goToMatch(index) {
+        if (!searchMatches.length || !cmView) return;
+        searchIndex = (index + searchMatches.length) % searchMatches.length;
+        const match = searchMatches[searchIndex];
+        const startPos = cmView.posFromIndex(match.start);
+        const endPos = cmView.posFromIndex(match.end);
+        cmView.setSelection(startPos, endPos);
+        cmView.scrollIntoView({ from: startPos, to: endPos }, 100);
+        searchCount.textContent = `${searchIndex + 1}/${searchMatches.length}`;
+    }
+
+    function replaceCurrent() {
+        if (!searchMatches.length || searchIndex < 0 || !cmView) return;
+        const match = searchMatches[searchIndex];
+        const replacement = replaceInput.value;
+        cmView.replaceRange(replacement, cmView.posFromIndex(match.start), cmView.posFromIndex(match.end), "replace");
+        saveNow();
+        searchMatches = computeMatches();
+        if (searchIndex >= searchMatches.length) searchIndex = searchMatches.length - 1;
+        searchCount.textContent = searchMatches.length ? `${searchIndex + 1}/${searchMatches.length}` : '0/0';
+    }
+
+    function replaceAllMatches() {
+        const rawQuery = searchInput.value;
+        if (!rawQuery) return;
+        const matches = computeMatches();
+        if (!matches.length) return;
+
+        const value = getEditorContent();
+        const replacement = replaceInput.value;
+        let result = '';
+        let lastEnd = 0;
+        for (const match of matches) {
+            result += value.slice(lastEnd, match.start);
+            result += replacement;
+            lastEnd = match.end;
+        }
+        result += value.slice(lastEnd);
+
+        setEditorContent(result);
+        saveNow();
+        refreshSearchResults();
+        toast(`Заменено вхождений: ${matches.length}`, { type: 'success' });
+    }
+
+    $('searchBtn').addEventListener('click', () => (searchPanel.classList.contains('open') ? closeSearch() : openSearch()));
+    $('searchClose').addEventListener('click', closeSearch);
+    $('searchNext').addEventListener('click', () => goToMatch(searchIndex + 1));
+    $('searchPrev').addEventListener('click', () => goToMatch(searchIndex - 1));
+    $('replaceOne').addEventListener('click', replaceCurrent);
+    $('replaceAll').addEventListener('click', replaceAllMatches);
+    searchInput.addEventListener('input', () => { searchIndex = -1; refreshSearchResults(); if (searchMatches.length) goToMatch(0); });
+    searchInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') { event.preventDefault(); goToMatch(searchIndex + (event.shiftKey ? -1 : 1)); }
+        if (event.key === 'Escape') closeSearch();
+    });
+
+    const uiSettings = { fontSize: 13, tabSize: 2, wrap: false };
+
+    function applyUiSettings() {
+        const root = document.documentElement;
+        root.style.setProperty('--editor-font-size', `${uiSettings.fontSize}px`);
+        if (cmView) {
+            cmView.setOption("tabSize", uiSettings.tabSize);
+            cmView.setOption("lineWrapping", uiSettings.wrap);
+            cmView.refresh();
+        }
+    }
+
+    function loadUiSettings() {
+        const stored = safeParse(localStorage.getItem(STORAGE.ui) || 'null');
+        const settings = stored && stored.settings;
+        if (settings) {
+            if (Number.isFinite(settings.fontSize)) uiSettings.fontSize = Math.min(20, Math.max(11, settings.fontSize));
+            if (settings.tabSize === 2 || settings.tabSize === 4) uiSettings.tabSize = settings.tabSize;
+            uiSettings.wrap = Boolean(settings.wrap);
+        }
+        $('fontSizeSelect').value = String(uiSettings.fontSize);
+        $('tabSizeSelect').value = String(uiSettings.tabSize);
+        $('wrapToggle').checked = uiSettings.wrap;
+        applyUiSettings();
+    }
+
+    function persistUiSettings() {
+        const stored = safeParse(localStorage.getItem(STORAGE.ui) || 'null') || {};
+        stored.settings = uiSettings;
+        stored.active = activeFileId;
+        stored.tabs = openFileIds;
+        try { localStorage.setItem(STORAGE.ui, JSON.stringify(stored)); } catch (e) { }
+    }
+
+    $('fontSizeSelect').addEventListener('change', (event) => { uiSettings.fontSize = Number(event.target.value); persistUiSettings(); applyUiSettings(); });
+    $('tabSizeSelect').addEventListener('change', (event) => { uiSettings.tabSize = Number(event.target.value); persistUiSettings(); applyUiSettings(); });
+    $('wrapToggle').addEventListener('change', (event) => { uiSettings.wrap = event.target.checked; persistUiSettings(); applyUiSettings(); });
+
+    const settingsModal = $('settingsModal');
+    $('settingsBtn').addEventListener('click', () => { settingsModal.classList.add('open'); pushGuard(); });
+    $('closeSettingsBtn').addEventListener('click', () => settingsModal.classList.remove('open'));
+    settingsModal.addEventListener('click', (event) => { if (event.target === settingsModal) settingsModal.classList.remove('open'); });
+
+    const CONSOLE_SHIM = `(function () {
+        var send = function (type, args, stack) {
+            try {
+                var parts = Array.prototype.map.call(args, function (arg) {
+                    if (arg instanceof Error) return arg.name + ': ' + arg.message;
+                    if (typeof arg === 'object' && arg !== null) {
+                        try { return JSON.stringify(arg); } catch (e) { return String(arg); }
+                    }
+                    return String(arg);
+                });
+                parent.postMessage({ type: 'codedock-console', logType: type, message: parts.join(' '), stack: stack || '' }, '*');
+            } catch (e) {}
+        };
+        ['log', 'info', 'warn', 'error'].forEach(function (level) {
+            var original = console[level];
+            console[level] = function () { send(level, arguments); original.apply(console, arguments); };
+        });
+        window.addEventListener('error', function (event) {
+            send('error', [event.message + ' (строка ' + event.lineno + ')'], event.error && event.error.stack ? event.error.stack : '');
+        });
+        window.addEventListener('unhandledrejection', function (event) {
+            var reason = event.reason;
+            send('error', ['Необработанная ошибка: ' + (reason && reason.message ? reason.message : reason)],
+                reason && reason.stack ? reason.stack : '');
+        });
+        window.addEventListener('load', function() {
+            console.log('CodeDock Preview Ready');
+        });
+    })();`;
+
+    function buildPreviewHtml(files) {
+        const list = Array.isArray(files) ? files : [];
+        const htmlFile = list.find((file) => file.name.toLowerCase() === 'index.html') || list.find((file) => file.name.toLowerCase().endsWith('.html'));
+        if (!htmlFile) return '<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px"><h2>Файл index.html не найден</h2><p>Создайте index.html в корне проекта.</p></body></html>';
+
+        const byPath = new Map();
+        list.forEach((file) => { byPath.set(file.name.toLowerCase(), file); byPath.set(file.path.toLowerCase(), file); });
+        const resolve = (raw) => {
+            if (!raw) return null;
+            const clean = raw.split('?')[0].split('#')[0].replace(/^\.\//, '').replace(/^\//, '');
+            const direct = byPath.get(clean.toLowerCase());
+            if (direct) return direct;
+            const base = clean.split('/').pop();
+            return byPath.get(base.toLowerCase()) || null;
+        };
+
+        let html = String(htmlFile.content || '');
+        if (!/<head[^>]*>/i.test(html)) html = html.replace(/<html[^>]*>/i, (match) => `${match}<head></head>`);
+
+        html = html.replace(/<link\b[^>]*>/gi, (tag) => {
+            if (!/rel\s*=\s*["']?stylesheet/i.test(tag)) return tag;
+            const href = /href\s*=\s*["']([^"']+)["']/i.exec(tag);
+            const file = href ? resolve(href[1]) : null;
+            if (!file) return tag;
+            return `<style data-src="${escapeHtml(href[1])}">\n${file.content || ''}\n</style>`;
+        });
+
+        html = html.replace(/<script\b([^>]*)>\s*<\/script>/gi, (tag, attrs) => {
+            const src = /src\s*=\s*["']([^"']+)["']/i.exec(attrs);
+            if (!src) return tag;
+            const file = resolve(src[1]);
+            if (!file) return tag;
+            const isModule = /type\s*=\s*["']module["']/i.test(attrs);
+            return `<script${isModule ? ' type="module"' : ''} data-src="${escapeHtml(src[1])}">\n${file.content || ''}\n<\/script>`;
+        });
+
+        if (/<head[^>]*>/i.test(html)) html = html.replace(/<head([^>]*)>/i, (match) => `${match}\n<script>${CONSOLE_SHIM}<\/script>`);
+        else html = `<script>${CONSOLE_SHIM}<\/script>` + html;
+
+        return html;
+    }
+
+    class CodeDockConsole {
+        constructor() {
+            this.panel = $('consolePanel');
+            this.output = $('consoleOutput');
+            this.dots = [$('consoleDot'), $('previewConsoleDot')].filter(Boolean);
+            window.addEventListener('message', (event) => {
+                const data = event.data;
+                if (!data || data.type !== 'codedock-console') return;
+                this.log(data.logType, data.message, data.stack);
+            });
+        }
+        toggle() { 
+            this.panel.classList.toggle('open'); 
+            this.dots.forEach(d => d.classList.remove('show')); 
+            if (this.panel.classList.contains('open')) this.output.scrollTop = this.output.scrollHeight;
+        }
+        open() { 
+            this.panel.classList.add('open'); 
+            this.dots.forEach(d => d.classList.remove('show')); 
+            this.output.scrollTop = this.output.scrollHeight;
+        }
+        close() { this.panel.classList.remove('open'); }
+        clear() { this.output.innerHTML = ''; }
+        log(type, message, stack) {
+            const line = document.createElement('div');
+            line.className = `console-line ${type || 'log'}`;
+            let icon = 'fa-angle-right';
+            if (type === 'error') icon = 'fa-circle-exclamation';
+            if (type === 'warn') icon = 'fa-triangle-exclamation';
+            if (type === 'info') icon = 'fa-circle-info';
+            const safe = escapeHtml(String(message == null ? '' : message));
+            const stackHtml = stack ? `<span class="stack">${escapeHtml(String(stack).split('\n').slice(0, 4).join('\n'))}</span>` : '';
+            line.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${safe}${stackHtml}</span>`;
+            this.output.appendChild(line);
+
+            if (type === 'error') {
+                this.open();
+            } else if (!this.panel.classList.contains('open')) {
+                this.dots.forEach(d => d.classList.add('show'));
+            } else {
+                this.output.scrollTop = this.output.scrollHeight;
+            }
+        }
+    }
+
+    const consolePanel = new CodeDockConsole();
+    $('consoleBtn').addEventListener('click', () => consolePanel.toggle());
+    $('previewConsoleBtn').addEventListener('click', () => consolePanel.toggle());
+    $('closeConsoleBtn').addEventListener('click', () => consolePanel.close());
+    $('clearConsoleBtn').addEventListener('click', () => consolePanel.clear());
+
+    function filesWithPaths(items, prefix = [], list = []) {
+        items.forEach((item) => {
+            if (item.type === 'file') list.push({ name: item.name, path: [...prefix, item.name].join('/'), content: item.content || '' });
+            else if (item.children) filesWithPaths(item.children, [...prefix, item.name], list);
+        });
+        return list;
+    }
+
+    async function runProject() {
+        const files = filesWithPaths(fileSystem);
+        const htmlFile = files.find((f) => f.name.toLowerCase() === 'index.html') || files.find((f) => f.name.toLowerCase().endsWith('.html'));
+        if (!htmlFile) { toast('Файл index.html не найден.', { type: 'error' }); return; }
+
+        const html = buildPreviewHtml(files);
+        $('previewFrame').srcdoc = html;
+
+        consolePanel.clear();
+        consolePanel.close();
+        $('previewOverlay').classList.add('open');
+        pushGuard();
+    }
+
+    $('runProjectBtn').addEventListener('click', runProject);
+    
+    $('closePreviewBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        $('previewOverlay').classList.remove('open');
+        consolePanel.close();
+    });
+
+    // --- ZIP ГЕНЕРАТОР ---
+    const CRC_TABLE = (() => {
+        const table = new Uint32Array(256);
+        for (let i = 0; i < 256; i += 1) {
+            let value = i;
+            for (let bit = 0; bit < 8; bit += 1) value = value & 1 ? 0xEDB88320 ^ (value >>> 1) : value >>> 1;
+            table[i] = value >>> 0;
+        }
+        return table;
+    })();
+
+    function crc32(bytes) {
+        let crc = 0xFFFFFFFF;
+        for (let i = 0; i < bytes.length; i += 1) crc = CRC_TABLE[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+        return (crc ^ 0xFFFFFFFF) >>> 0;
+    }
+
+    function dosDateTime(date) {
+        const time = ((date.getHours() & 31) << 11) | ((date.getMinutes() & 63) << 5) | ((date.getSeconds() >> 1) & 31);
+        const day = (((date.getFullYear() - 1980) & 127) << 9) | (((date.getMonth() + 1) & 15) << 5) | (date.getDate() & 31);
+        return { time, day };
+    }
+
+    function zipStore(files, date = new Date()) {
+        const encoder = new TextEncoder();
+        const chunks = [];
+        const central = [];
+        const { time, day } = dosDateTime(date);
+        let offset = 0;
+
+        files.forEach((file) => {
+            const nameBytes = encoder.encode(file.path || file.name);
+            const data = encoder.encode(file.content || '');
+            const crc = crc32(data);
+
+            const local = new Uint8Array(30 + nameBytes.length);
+            const view = new DataView(local.buffer);
+            view.setUint32(0, 0x04034b50, true);
+            view.setUint16(4, 20, true);
+            view.setUint16(6, 0, true);
+            view.setUint16(8, 0, true);
+            view.setUint16(10, time, true);
+            view.setUint16(12, day, true);
+            view.setUint32(14, crc, true);
+            view.setUint32(18, data.length, true);
+            view.setUint32(22, data.length, true);
+            view.setUint16(26, nameBytes.length, true);
+            view.setUint16(28, 0, true);
+            local.set(nameBytes, 30);
+
+            chunks.push(local, data);
+
+            const centralHeader = new Uint8Array(46 + nameBytes.length);
+            const centralView = new DataView(centralHeader.buffer);
+            centralView.setUint32(0, 0x02014b50, true);
+            centralView.setUint16(4, 20, true);
+            centralView.setUint16(6, 20, true);
+            centralView.setUint16(8, 0, true);
+            centralView.setUint16(10, 0, true);
+            centralView.setUint16(12, time, true);
+            centralView.setUint16(14, day, true);
+            centralView.setUint32(16, crc, true);
+            centralView.setUint32(20, data.length, true);
+            centralView.setUint32(24, data.length, true);
+            centralView.setUint16(28, nameBytes.length, true);
+            centralView.setUint16(30, 0, true);
+            centralView.setUint16(32, 0, true);
+            centralView.setUint16(34, 0, true);
+            centralView.setUint16(36, 0, true);
+            centralView.setUint32(38, 0, true);
+            centralView.setUint32(42, offset, true);
+            centralHeader.set(nameBytes, 46);
+            central.push(centralHeader);
+
+            offset += local.length + data.length;
+        });
+
+        const centralSize = central.reduce((sum, chunk) => sum + chunk.length, 0);
+        const end = new Uint8Array(22);
+        const endView = new DataView(end.buffer);
+        endView.setUint32(0, 0x06054b50, true);
+        endView.setUint16(8, files.length, true);
+        endView.setUint16(10, files.length, true);
+        endView.setUint32(12, centralSize, true);
+        endView.setUint32(16, offset, true);
+
+        return new Blob([...chunks, ...central, end], { type: 'application/zip' });
+    }
+
+    function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+    }
+
+    // --- МОДАЛ ЭКСПОРТА ---
+    const exportModal = $('exportModal');
+
+    function showUnsupportedToast() {
+        toast('Приносим прощения, этот способ в вашем случае не работает. Попробуйте другой.', {
+            type: 'warn',
+            duration: 5000
+        });
+    }
+
+    function checkCapability(action) {
+        switch (action) {
+            case 'download':
+                return true;
+            case 'save-as':
+                return 'showSaveFilePicker' in window && window.isSecureContext;
+            case 'share':
+                if (!navigator.canShare) return false;
+                if (!window.isSecureContext) return false;
+                try {
+                    const testFile = new File(['x'], 'test.txt', { type: 'text/plain' });
+                    return navigator.canShare({ files: [testFile] });
+                } catch (e) {
+                    return false;
+                }
+            default:
+                return false;
+        }
+    }
+
+    async function exportDownload() {
+        const files = filesWithPaths(fileSystem);
+        if (!files.length) { toast('В проекте нет файлов.', { type: 'warn' }); return; }
+        downloadBlob(zipStore(files), 'codedock-project.zip');
+        toast(`Скачано файлов: ${files.length}`, { type: 'success' });
+    }
+
+    async function exportSaveAs() {
+        const files = filesWithPaths(fileSystem);
+        if (!files.length) { toast('В проекте нет файлов.', { type: 'warn' }); return; }
+        const blob = zipStore(files);
+
+        try {
             const handle = await window.showSaveFilePicker({
-                suggestedName: 'codedock_project.zip',
-                types: [{ description: 'ZIP archive', accept: {'application/zip': ['.zip']} }]
+                suggestedName: 'codedock-project.zip',
+                types: [{ description: 'ZIP архив', accept: { 'application/zip': ['.zip'] } }]
             });
             const writable = await handle.createWritable();
             await writable.write(blob);
             await writable.close();
-            showToast('Сохранено');
-        } catch (e) {
-            if (e.name !== 'AbortError') {
-                showToast('Приносим прощения, этот способ в вашем случае не работает. Попробуйте другой.');
-            }
+            toast('ZIP сохранён.', { type: 'success' });
+        } catch (err) {
+            if (err.name === 'AbortError') return;
+            toast(`Ошибка сохранения: ${err.message}`, { type: 'error' });
         }
-        document.getElementById('exportModal').classList.remove('open');
-    };
-    document.getElementById('optShare').onclick = async () => {
-        try {
-            if (!navigator.share) {
-                showToast('Приносим прощения, этот способ в вашем случае не работает. Попробуйте другой.');
-                return;
-            }
-            const blob = await generateZipBlob();
-            const file = new File([blob], 'codedock_project.zip', { type: 'application/zip' });
-            await navigator.share({ files: [file], title: 'CodeDock Project' });
-        } catch (e) {
-            if (e.name !== 'AbortError') {
-                showToast('Приносим прощения, этот способ в вашем случае не работает. Попробуйте другой.');
-            }
-        }
-        document.getElementById('exportModal').classList.remove('open');
-    };
+    }
 
-    // Импорт ZIP
-    document.getElementById('optImportZip').onclick = () => {
-        document.getElementById('fileInputZip').click();
-        document.getElementById('exportModal').classList.remove('open');
-    };
-    document.getElementById('fileInputZip').addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) importZip(file);
-        e.target.value = '';
+    async function exportShare() {
+        const files = filesWithPaths(fileSystem);
+        if (!files.length) { toast('В проекте нет файлов.', { type: 'warn' }); return; }
+        const blob = zipStore(files);
+        const file = new File([blob], 'codedock-project.zip', { type: 'application/zip' });
+
+        try {
+            await navigator.share({
+                files: [file],
+                title: 'CodeDock Project',
+                text: 'Мой проект из CodeDock Studio'
+            });
+        } catch (err) {
+            if (err.name === 'AbortError') return;
+            toast(`Ошибка отправки: ${err.message}`, { type: 'error' });
+        }
+    }
+
+    function openExportModal() {
+        exportModal.classList.add('open');
+        pushGuard();
+    }
+
+    function closeExportModal() {
+        exportModal.classList.remove('open');
+    }
+
+    $('exportZipBtn').addEventListener('click', openExportModal);
+    $('closeExportModal').addEventListener('click', closeExportModal);
+    exportModal.addEventListener('click', (event) => {
+        if (event.target === exportModal) { closeExportModal(); return; }
+
+        const option = event.target.closest('[data-export-action]');
+        if (!option) return;
+
+        const action = option.dataset.exportAction;
+
+        if (!checkCapability(action)) {
+            showUnsupportedToast();
+            return;
+        }
+
+        closeExportModal();
+
+        if (action === 'download') exportDownload();
+        else if (action === 'save-as') exportSaveAs();
+        else if (action === 'share') exportShare();
     });
 
-    // Консоль
-    document.getElementById('btnConsoleTop').onclick = () => {
-        document.getElementById('consolePanel').classList.toggle('open');
-    };
-    document.getElementById('btnPreviewConsole').onclick = () => {
-        document.getElementById('consolePanel').classList.toggle('open');
-    };
-    document.getElementById('btnCloseConsole').onclick = () => {
-        document.getElementById('consolePanel').classList.remove('open');
-    };
-    document.getElementById('btnBackToEditor').onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        closePreview();
-        if (pushGuard) {
-            pushGuard = false;
-            history.back();
-        }
-    };
+    // --- JSON ЭКСПОРТ / ИМПОРТ ---
+    function exportJson() {
+        const payload = { app: 'CodeDock Studio', version: APP_VERSION, exportedAt: new Date().toISOString(), tree: fileSystem };
+        downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), 'codedock-project.json');
+        toast('Проект выгружен в JSON.', { type: 'success' });
+    }
 
-    // Меню файлов
-    document.getElementById('btnCloseFileMenu').onclick = closeFileMenu;
-    document.getElementById('btnNewFile').onclick = createFile;
+    function importJson(text) {
+        const parsed = safeParse(text);
+        if (!parsed) { toast('Файл поврежден.', { type: 'error' }); return false; }
+        let tree = null;
+        if (Array.isArray(parsed)) tree = normalizeTree(parsed);
+        else if (parsed && Array.isArray(parsed.tree)) tree = normalizeTree(parsed.tree);
+        
+        if (!tree || !tree.length) { toast('Проект пуст или поврежден.', { type: 'error' }); return false; }
 
-    // Контекстное меню
-    document.getElementById('ctxRename').onclick = () => {
-        if (contextTargetFile) renameFile(contextTargetFile);
-        closeContextMenu();
-    };
-    document.getElementById('ctxDelete').onclick = () => {
-        if (contextTargetFile) deleteFile(contextTargetFile);
-        closeContextMenu();
-    };
+        const previous = clone(fileSystem);
+        fileSystem = tree;
+        activeFileId = getAllFiles(fileSystem)[0]?.id || null;
+        openFileIds = activeFileId ? [activeFileId] : [];
+        lastSavedTreeHash = '';
+        saveNow(true);
+        renderEditorAndTabs();
+        toast('Проект импортирован.', {
+            type: 'success',
+            action: { label: 'Отменить', onClick: () => {
+                fileSystem = previous;
+                activeFileId = getAllFiles(fileSystem)[0]?.id || null;
+                openFileIds = activeFileId ? [activeFileId] : [];
+                saveNow(true);
+                renderEditorAndTabs();
+            }},
+        });
+        return true;
+    }
 
-    // Закрытие модалок по клику вне
-    document.querySelectorAll('.modal-overlay').forEach(overlay => {
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-                overlay.classList.remove('open');
-            }
+    $('exportJsonBtn').addEventListener('click', exportJson);
+    $('importBtn').addEventListener('click', (e) => { e.preventDefault(); $('importFile').click(); });
+    $('importFile').addEventListener('change', (event) => {
+        const file = event.target.files && event.target.files[0];
+        event.target.value = '';
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => { try { importJson(e.target.result); } catch (error) { toast(`Ошибка: ${error.message}`, { type: 'error' }); } };
+        reader.readAsText(file);
+    });
+
+    $('resetProjectBtn').addEventListener('click', async () => {
+        const ok = await confirmAction('Сбросить проект?', 'Все файлы будут заменены демо-проектом.');
+        if (!ok) return;
+        const previous = clone(fileSystem);
+        fileSystem = clone(DEFAULT_PROJECT);
+        activeFileId = getAllFiles(fileSystem)[0]?.id || null;
+        openFileIds = activeFileId ? [activeFileId] : [];
+        lastSavedTreeHash = '';
+        saveNow(true);
+        settingsModal.classList.remove('open');
+        renderEditorAndTabs();
+        toast('Проект сброшен.', {
+            type: 'success',
+            action: { label: 'Отменить', onClick: () => {
+                fileSystem = previous;
+                activeFileId = getAllFiles(fileSystem)[0]?.id || null;
+                openFileIds = activeFileId ? [activeFileId] : [];
+                saveNow(true);
+                renderEditorAndTabs();
+            }},
         });
     });
 
-    // Кнопка "Назад" в браузере (инициализация)
-    history.pushState({}, '');
-}
+    function getFileIcon(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        switch (ext) {
+            case 'html': return '<i class="fa-brands fa-html5 icon-html"></i>';
+            case 'css': return '<i class="fa-brands fa-css3-alt icon-css"></i>';
+            case 'js': return '<i class="fa-brands fa-js icon-js"></i>';
+            case 'json': return '<i class="fa-solid fa-code icon-json"></i>';
+            default: return '<i class="fa-regular fa-file-code icon-default"></i>';
+        }
+    }
 
-// Запуск после загрузки DOM
-document.addEventListener('DOMContentLoaded', initApp);
+    function renderTree() {
+        fileTreeEl.innerHTML = '';
+        let fileCount = 0;
+        let folderCount = 0;
+        const countStats = (items) => {
+            items.forEach((item) => {
+                if (item.type === 'file') fileCount += 1;
+                else { folderCount += 1; if (item.children) countStats(item.children); }
+            });
+        };
+        countStats(fileSystem);
+
+        const query = $('fileSearch').value.trim().toLowerCase();
+        const visible = filterTree(fileSystem, query);
+
+        const createNodes = (items, parentElement) => {
+            items.forEach((item) => {
+                if (item.type === 'file') {
+                    const row = document.createElement('div');
+                    row.className = `tree-item ${item.id === activeFileId ? 'active' : ''}`;
+                    row.innerHTML = `
+                        <div class="tree-info">
+                            ${getFileIcon(item.name)}
+                            <span>${escapeHtml(item.name)}</span>
+                        </div>
+                        <div class="tree-actions">
+                            <button class="action-icon" data-action="rename" aria-label="Переименовать"><i class="fa-solid fa-pen"></i></button>
+                            <button class="action-icon delete" data-action="delete" aria-label="Удалить"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    `;
+                    row.addEventListener('click', (event) => {
+                        const button = event.target.closest('button[data-action]');
+                        if (button) {
+                            event.stopPropagation();
+                            if (button.dataset.action === 'rename') openRenameModal(item.id);
+                            else deleteItem(item.id);
+                            return;
+                        }
+                        openFile(item.id);
+                    });
+                    parentElement.appendChild(row);
+                    return;
+                }
+
+                const wrapper = document.createElement('div');
+                const header = document.createElement('div');
+                header.className = 'tree-item';
+                header.innerHTML = `
+                    <div class="tree-info">
+                        <i class="fa-solid fa-chevron-right chevron-icon ${item.isOpen ? 'rotated' : ''}"></i>
+                        <i class="fa-solid ${item.isOpen ? 'fa-folder-open' : 'fa-folder'} icon-folder"></i>
+                        <span>${escapeHtml(item.name)}</span>
+                    </div>
+                    <div class="tree-actions">
+                        <button class="action-icon" data-action="create" aria-label="Создать внутри"><i class="fa-solid fa-plus"></i></button>
+                        <button class="action-icon" data-action="rename" aria-label="Переименовать"><i class="fa-solid fa-pen"></i></button>
+                        <button class="action-icon delete" data-action="delete" aria-label="Удалить"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                const children = document.createElement('div');
+                children.className = `folder-children ${item.isOpen ? 'open' : ''}`;
+
+                header.addEventListener('click', (event) => {
+                    const button = event.target.closest('button[data-action]');
+                    if (button) {
+                        event.stopPropagation();
+                        if (button.dataset.action === 'create') openCreateInFolder(item.id);
+                        else if (button.dataset.action === 'rename') openRenameModal(item.id);
+                        else deleteItem(item.id);
+                        return;
+                    }
+                    if (query) return;
+                    const real = findItemById(fileSystem, item.id);
+                    if (real) { real.isOpen = !real.isOpen; saveNow(); renderTree(); }
+                });
+
+                wrapper.appendChild(header);
+                wrapper.appendChild(children);
+                parentElement.appendChild(wrapper);
+                if (item.children && item.children.length) createNodes(item.children, children);
+            });
+        };
+
+        createNodes(visible, fileTreeEl);
+        statsTextEl.textContent = `Файлов: ${fileCount} | Папок: ${folderCount}`;
+    }
+
+    function filterTree(items, query) {
+        if (!query) return items;
+        const result = [];
+        for (const item of items) {
+            if (item.type === 'file') {
+                if (item.name.toLowerCase().includes(query)) result.push(item);
+            } else {
+                const children = filterTree(item.children || [], query);
+                if (item.name.toLowerCase().includes(query) || children.length) {
+                    result.push({ ...item, isOpen: true, children });
+                }
+            }
+        }
+        return result;
+    }
+
+    const createModal = $('createModal');
+    const newItemNameInput = $('newItemName');
+    const parentFolderSelect = $('parentFolderSelect');
+    const modalTitle = $('modalTitle');
+    const typeSelector = $('typeSelector');
+    const parentFolderField = $('parentFolderField');
+
+    let creatingType = 'file';
+    let editingItemId = null;
+    let modalParentId = null;
+
+    function populateFolderSelect(selectedId = 'root') {
+        parentFolderSelect.innerHTML = '<option value="root">/ (Корень проекта)</option>';
+        const traverse = (items, prefix = '') => {
+            items.forEach((item) => {
+                if (item.type === 'folder') {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = `${prefix}/${item.name}`;
+                    parentFolderSelect.appendChild(option);
+                    if (item.children) traverse(item.children, `${prefix}/${item.name}`);
+                }
+            });
+        };
+        traverse(fileSystem);
+        parentFolderSelect.value = selectedId;
+    }
+
+    function openCreateModal(parentId = 'root') {
+        editingItemId = null;
+        modalParentId = parentId;
+        creatingType = 'file';
+        document.querySelectorAll('.type-btn').forEach((button) => button.classList.toggle('active', button.dataset.type === 'file'));
+        modalTitle.textContent = 'Новый элемент';
+        typeSelector.style.display = 'flex';
+        parentFolderField.style.display = 'flex';
+        populateFolderSelect(parentId);
+        newItemNameInput.value = '';
+        createModal.classList.add('open');
+        pushGuard();
+        setTimeout(() => newItemNameInput.focus(), 60);
+    }
+
+    function openCreateInFolder(folderId) { openCreateModal(folderId); }
+
+    function openRenameModal(id) {
+        const item = findItemById(fileSystem, id);
+        if (!item) return;
+        editingItemId = id;
+        modalParentId = (getParent(fileSystem, id) || {}).id || null;
+        modalTitle.textContent = 'Переименовать';
+        typeSelector.style.display = 'none';
+        parentFolderField.style.display = 'none';
+        newItemNameInput.value = item.name;
+        createModal.classList.add('open');
+        pushGuard();
+        setTimeout(() => { newItemNameInput.focus(); newItemNameInput.select(); }, 60);
+    }
+
+    function closeCreateModal() { createModal.classList.remove('open'); editingItemId = null; }
+
+    $('openCreateModal').addEventListener('click', () => openCreateModal('root'));
+    $('cancelModal').addEventListener('click', closeCreateModal);
+    createModal.addEventListener('click', (event) => { if (event.target === createModal) closeCreateModal(); });
+    document.querySelectorAll('.type-btn').forEach((button) => {
+        button.addEventListener('click', () => {
+            document.querySelectorAll('.type-btn').forEach((item) => item.classList.remove('active'));
+            button.classList.add('active');
+            creatingType = button.dataset.type;
+        });
+    });
+
+    function handleSaveItem() {
+        const raw = newItemNameInput.value.trim();
+        if (!raw) return;
+        const name = raw.replace(/[/\\]/g, '-');
+
+        if (editingItemId) {
+            const item = findItemById(fileSystem, editingItemId);
+            if (!item) return;
+            if (nameExists(modalParentId, name, editingItemId)) { toast('Такое имя уже есть.', { type: 'error' }); return; }
+            if (item.name !== name) { item.name = name; saveNow(true); }
+            closeCreateModal();
+            renderEditorAndTabs();
+            return;
+        }
+
+        const parentId = parentFolderSelect.value === 'root' ? null : parentFolderSelect.value;
+        if (parentId && !findItemById(fileSystem, parentId)) { toast('Папка не существует.', { type: 'error' }); return; }
+        if (nameExists(parentId, name, null)) { toast('Элемент уже существует.', { type: 'error' }); return; }
+
+        const item = { id: genId(), name, type: creatingType, ...(creatingType === 'folder' ? { isOpen: true, children: [] } : { content: '' }) };
+        if (parentId) {
+            const parent = findItemById(fileSystem, parentId);
+            parent.isOpen = true;
+            parent.children.push(item);
+        } else {
+            fileSystem.push(item);
+        }
+
+        if (creatingType === 'file') {
+            activeFileId = item.id;
+            if (!openFileIds.includes(item.id)) openFileIds.push(item.id);
+            closeDrawer();
+        }
+        saveNow(true);
+        closeCreateModal();
+        renderEditorAndTabs();
+    }
+
+    $('confirmCreate').addEventListener('click', handleSaveItem);
+    newItemNameInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') handleSaveItem();
+        if (event.key === 'Escape') closeCreateModal();
+    });
+
+    function deleteItem(id) {
+        const item = findItemById(fileSystem, id);
+        if (!item) return;
+        const snapshot = clone(item);
+        const parent = getParent(fileSystem, id);
+        const parentId = parent ? parent.id : null;
+        const index = siblingsOf(parentId).findIndex((entry) => entry.id === id);
+
+        const result = removeItemById(id);
+        if (!result) return;
+
+        const remaining = getAllFiles(fileSystem);
+        openFileIds = openFileIds.filter((fileId) => remaining.some((file) => file.id === fileId));
+        if (!remaining.some((file) => file.id === activeFileId)) {
+            activeFileId = openFileIds.length ? openFileIds[0] : null;
+        }
+        saveNow(true);
+        renderEditorAndTabs();
+
+        toast(`Удалено: ${snapshot.name}`, {
+            type: 'warn',
+            duration: 7000,
+            action: { label: 'Отменить', onClick: () => {
+                if (insertItem(snapshot, parentId, Math.max(0, index))) {
+                    saveNow(true);
+                    renderEditorAndTabs();
+                    toast('Восстановлено.', { type: 'success' });
+                } else { toast('Папка удалена.', { type: 'error' }); }
+            }},
+        });
+    }
+
+    $('collapseAllBtn').addEventListener('click', () => {
+        const collapse = (items) => {
+            items.forEach((item) => {
+                if (item.type === 'folder') { item.isOpen = false; if (item.children) collapse(item.children); }
+            });
+        };
+        collapse(fileSystem);
+        saveNow();
+        renderTree();
+    });
+
+    $('fileSearch').addEventListener('input', () => renderTree());
+
+    const fileDrawer = $('fileDrawer');
+    const drawerBackdrop = $('drawerBackdrop');
+    const customContextMenu = $('customContextMenu');
+
+    let gesture = null;
+    const workspaceEl = $('workspace');
+
+    function openDrawer() { fileDrawer.classList.add('open'); drawerBackdrop.classList.add('open'); pushGuard(); }
+    function closeDrawer() { fileDrawer.classList.remove('open'); drawerBackdrop.classList.remove('open'); }
+
+    $('openDrawerBtn').addEventListener('click', openDrawer);
+    $('closeDrawerBtn').addEventListener('click', closeDrawer);
+    drawerBackdrop.addEventListener('click', closeDrawer);
+
+    workspaceEl.addEventListener('touchstart', (event) => {
+        if (event.touches.length !== 1) return;
+        const touch = event.touches[0];
+        const target = event.target;
+        const isOpen = fileDrawer.classList.contains('open');
+
+        if (target.closest('button') || target.closest('input') || target.closest('a')) return;
+
+        const isEditor = target.closest('.CodeMirror') || target.closest('.editor-content') || target.closest('.edge-swipe-area');
+
+        if (!isOpen && isEditor) {
+            gesture = { mode: 'open', startX: touch.clientX, startY: touch.clientY, width: fileDrawer.offsetWidth, locked: false };
+        } else if (isOpen && target.closest('.file-drawer')) {
+            gesture = { mode: 'close', startX: touch.clientX, startY: touch.clientY, width: fileDrawer.offsetWidth, locked: false };
+        }
+        
+        if (gesture) {
+            fileDrawer.style.transition = 'none';
+            drawerBackdrop.style.transition = 'none';
+        }
+    }, { passive: true, capture: true });
+
+    workspaceEl.addEventListener('touchmove', (event) => {
+        if (!gesture) return;
+        const touch = event.touches[0];
+        const deltaX = touch.clientX - gesture.startX;
+        const deltaY = touch.clientY - gesture.startY;
+
+        if (!gesture.locked) {
+            if (Math.abs(deltaX) > Math.abs(deltaY) + 6) gesture.locked = true;
+            else if (Math.abs(deltaY) > Math.abs(deltaX) + 6) {
+                resetDrawerStyle();
+                gesture = null;
+                return;
+            }
+        }
+        if (!gesture.locked) return;
+
+        event.preventDefault(); 
+        
+        if (gesture.mode === 'open' && deltaX > 0) {
+            const move = Math.min(deltaX, gesture.width);
+            fileDrawer.style.transform = `translateX(${-gesture.width + move}px)`;
+            drawerBackdrop.style.opacity = String(move / gesture.width);
+        } else if (gesture.mode === 'close' && deltaX < 0) {
+            const move = Math.min(Math.abs(deltaX), gesture.width);
+            fileDrawer.style.transform = `translateX(${-move}px)`;
+            drawerBackdrop.style.opacity = String(1 - move / gesture.width);
+        }
+    }, { passive: false, capture: true });
+
+    workspaceEl.addEventListener('touchend', (event) => {
+        if (!gesture) return;
+        const { mode, startX, width, locked } = gesture;
+        const deltaX = event.changedTouches[0].clientX - startX;
+        resetDrawerStyle();
+        gesture = null;
+        if (!locked) return;
+        if (mode === 'open') deltaX > width * 0.3 ? openDrawer() : closeDrawer();
+        else deltaX < -(width * 0.3) ? closeDrawer() : openDrawer();
+    }, { capture: true });
+
+    function resetDrawerStyle() {
+        fileDrawer.style.transition = '';
+        drawerBackdrop.style.transition = '';
+        fileDrawer.style.transform = '';
+        drawerBackdrop.style.opacity = '';
+    }
+
+    function showContextMenu(x, y) {
+        customContextMenu.classList.add('open');
+        const rect = customContextMenu.getBoundingClientRect();
+        const left = Math.min(Math.max(10, x), window.innerWidth - rect.width - 10);
+        const top = Math.min(Math.max(10, y), window.innerHeight - rect.height - 10);
+        customContextMenu.style.left = `${left}px`;
+        customContextMenu.style.top = `${top}px`;
+        pushGuard();
+    }
+
+    function hideContextMenu() { customContextMenu.classList.remove('open'); }
+
+    if (cmView) {
+        cmView.getWrapperElement().addEventListener('contextmenu', (event) => {
+            event.preventDefault();
+            showContextMenu(event.clientX, event.clientY);
+        });
+        
+        let longPressTimer = null;
+        let touchMoved = false;
+        let lastTapTime = 0;
+        let lastTapX = 0;
+        let lastTapY = 0;
+
+        cmView.getWrapperElement().addEventListener('touchstart', (event) => {
+            if (event.touches.length !== 1) return;
+            const touch = event.touches[0];
+            const now = Date.now();
+            touchMoved = false;
+            if (now - lastTapTime < 300 && Math.abs(touch.clientX - lastTapX) < 40 && Math.abs(touch.clientY - lastTapY) < 40) {
+                clearTimeout(longPressTimer);
+                lastTapTime = 0;
+                showContextMenu(touch.clientX, touch.clientY);
+                return;
+            }
+            lastTapTime = now;
+            lastTapX = touch.clientX;
+            lastTapY = touch.clientY;
+            clearTimeout(longPressTimer);
+            longPressTimer = setTimeout(() => { if (!touchMoved) showContextMenu(touch.clientX, touch.clientY); }, 650);
+        }, { passive: true });
+
+        cmView.getWrapperElement().addEventListener('touchmove', () => { touchMoved = true; clearTimeout(longPressTimer); }, { passive: true });
+        cmView.getWrapperElement().addEventListener('touchend', () => clearTimeout(longPressTimer));
+    }
+
+    window.addEventListener('pointerdown', (event) => { if (!customContextMenu.contains(event.target)) hideContextMenu(); });
+
+    $('ctxSelectAll').addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        if (!cmView) return;
+        cmView.execCommand("selectAll");
+        cmView.focus();
+        hideContextMenu();
+    });
+
+    $('ctxCut').addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        if (!cmView) return;
+        const text = cmView.getSelection();
+        if (text) {
+            navigator.clipboard.writeText(text).catch(() => {});
+            cmView.replaceSelection("");
+        }
+        hideContextMenu();
+    });
+
+    $('ctxCopy').addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        if (!cmView) return;
+        const text = cmView.getSelection() || cmView.getValue();
+        navigator.clipboard.writeText(text).catch(() => {});
+        hideContextMenu();
+    });
+
+    $('ctxPaste').addEventListener('pointerdown', async (event) => {
+        event.preventDefault();
+        hideContextMenu();
+        try {
+            if (!navigator.clipboard || !navigator.clipboard.readText) throw new Error('Буфер обмена недоступен');
+            const text = await navigator.clipboard.readText();
+            if (cmView) {
+                cmView.replaceSelection(text);
+            }
+        } catch (error) {
+            toast('Вставка недоступна.', { type: 'warn' });
+        }
+    });
+
+    $('ctxClear').addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        if (cmView) {
+            cmView.setValue("");
+        }
+        hideContextMenu();
+    });
+
+    $('undoBtn').addEventListener('click', () => { if (cmView) { cmView.undo(); cmView.focus(); } });
+    $('redoBtn').addEventListener('click', () => { if (cmView) { cmView.redo(); cmView.focus(); } });
+
+    $('symbolBar').addEventListener('click', (event) => {
+        const button = event.target.closest('.sym-btn');
+        if (!button || !cmView) return;
+        const sym = button.dataset.sym;
+        cmView.replaceSelection(sym);
+        cmView.focus();
+    });
+
+    let guardPushed = false;
+
+    function pushGuard() {
+        if (guardPushed) return;
+        guardPushed = true;
+        window.history.pushState({ codedock: true }, '');
+    }
+
+    function closeTopPanel() {
+        if (customContextMenu.classList.contains('open')) { hideContextMenu(); return true; }
+        if ($('confirmModal').classList.contains('open')) { $('confirmModal').classList.remove('open'); return true; }
+        if (createModal.classList.contains('open')) { closeCreateModal(); return true; }
+        if (settingsModal.classList.contains('open')) { settingsModal.classList.remove('open'); return true; }
+        if (exportModal.classList.contains('open')) { closeExportModal(); return true; }
+        if ($('previewOverlay').classList.contains('open')) { 
+            $('previewOverlay').classList.remove('open'); 
+            consolePanel.close();
+            return true; 
+        }
+        if (consolePanel.panel.classList.contains('open')) { consolePanel.close(); return true; }
+        if (fileDrawer.classList.contains('open')) { closeDrawer(); return true; }
+        if (searchPanel.classList.contains('open')) { closeSearch(); return true; }
+        return false;
+    }
+
+    window.history.pushState({ codedock: true }, '');
+    guardPushed = true;
+
+    window.addEventListener('popstate', () => {
+        guardPushed = false;
+        if (closeTopPanel()) pushGuard();
+    });
+
+    $('resetCacheBtn').addEventListener('click', async () => {
+        const ok = await confirmAction('Очистить кэш?', 'Приложение загрузит свежую версию. Файлы проекта сохранятся.');
+        if (!ok) return;
+        try {
+            if ('caches' in window) {
+                const names = await caches.keys();
+                await Promise.all(names.map((name) => caches.delete(name)));
+            }
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(registrations.map((registration) => registration.unregister()));
+            }
+            const url = new URL(window.location.href);
+            url.searchParams.set('nocache', String(Date.now()));
+            window.location.replace(url.toString());
+        } catch (error) {
+            toast(`Ошибка сброса кэша: ${error.message}`, { type: 'error' });
+        }
+    });
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', async () => {
+            try {
+                await navigator.serviceWorker.register('sw.js');
+            } catch (error) {
+                console.warn('Ошибка регистрации Service Worker:', error.message);
+            }
+        });
+    }
+
+    function renderAll() { renderEditorAndTabs(); }
+
+    createEditor();
+    loadUiSettings();
+    loadProject();
+    renderAll();
+    saveNow(true);
+    setSaveStatus('saved', '<i class="fa-solid fa-check"></i> Готово');
+
+    window.__codedock = { version: APP_VERSION, getFileSystem: () => fileSystem, loadProject };
 </script>
 </body>
 </html>
