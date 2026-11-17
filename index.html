@@ -7,38 +7,50 @@
     <meta name="description" content="CodeDock Studio — мобильный редактор HTML, CSS и JS с предпросмотром и консолью.">
 
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#13131a">
+    <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="CodeDock">
 
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon-180.png">
 
+    <!-- Шрифты -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- CodeMirror 5 CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+    <!-- Используем светлую тему eclipse вместо dracula -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/eclipse.min.css">
     
     <style>
         :root {
-            --bg-main: #13131a;
-            --bg-panel: #181822;
-            --bg-card: #1f1f2c;
-            --bg-hover: #282838;
-            --accent: #8b5cf6;
-            --accent-hover: #7c3aed;
-            --accent-glow: rgba(139, 92, 246, 0.25);
-            --text-main: #f3f4f6;
-            --text-muted: #8e92a4;
-            --border: #2c2c3d;
-            --danger: #ef4444;
-            --success: #4ade80;
-            --info: #38bdf8;
-            --warn: #facc15;
+            /* Светлая палитра */
+            --bg-main: #ffffff;
+            --bg-panel: #f8f9fa;
+            --bg-card: #ffffff;
+            --bg-hover: #f1f3f5;
+            --accent: #007aff;
+            --accent-hover: #0062cc;
+            --accent-glow: rgba(0, 122, 255, 0.15);
+            --text-main: #1c1c1e;
+            --text-muted: #8e8e93;
+            --border: #e5e5ea;
+            --danger: #ff3b30;
+            --success: #34c759;
+            --info: #32ade6;
+            --warn: #ffcc00;
+            
             --editor-font-size: 13px;
-            --editor-font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            --editor-font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            --ui-font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            
+            --nav-height: 64px;
+            --header-height: 52px;
         }
 
         * {
@@ -46,11 +58,11 @@
             margin: 0;
             padding: 0;
             -webkit-tap-highlight-color: transparent;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: var(--ui-font);
         }
 
         body {
-            background-color: #0b0b0f;
+            background-color: var(--bg-panel);
             color: var(--text-main);
             display: flex;
             justify-content: center;
@@ -71,176 +83,111 @@
             overflow: hidden;
         }
 
+        /* --- Шапка (CodeHub Header) --- */
         .brand-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 6px 14px;
-            background-color: var(--bg-panel);
+            padding: 0 16px;
+            background-color: var(--bg-main);
             border-bottom: 1px solid var(--border);
             position: relative;
             z-index: 50;
             flex-shrink: 0;
-            gap: 8px;
+            height: var(--header-height);
+            padding-top: env(safe-area-inset-top);
         }
 
-        .brand-right {
+        .header-left, .header-right {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-left: auto;
-            min-width: 0;
+            gap: 16px;
+            min-width: 60px;
+        }
+        .header-right { justify-content: flex-end; }
+
+        .header-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-main);
         }
 
-        .brand-right .btn-icon-only {
-            width: 34px;
-            height: 34px;
-            border-radius: 9px;
-        }
-
-        .btn-icon-only.btn-run {
-            background-color: var(--accent);
-            border-color: var(--accent);
-            color: #fff;
-            box-shadow: 0 2px 8px var(--accent-glow);
-        }
-        .btn-icon-only.btn-run:active {
-            background-color: var(--accent-hover);
-            border-color: var(--accent-hover);
-        }
-
-        .logo-btn {
+        .icon-btn {
             background: none;
             border: none;
-            padding: 0;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            transition: transform 0.1s, opacity 0.1s;
-            -webkit-tap-highlight-color: transparent;
-            flex-shrink: 0;
-        }
-
-        .logo-btn:active { transform: scale(0.95); opacity: 0.8; }
-        .brand-logo { height: 44px; width: auto; object-fit: contain; }
-
-        .save-status {
-            font-size: 0.72rem;
-            color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            min-height: 16px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            min-width: 0;
-        }
-
-        .save-status i { font-size: 0.65rem; }
-        .save-status.saving { color: var(--warn); }
-        .save-status.saved { color: var(--success); }
-        .save-status.error { color: var(--danger); }
-
-        .editor-topbar {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 12px;
-            background-color: var(--bg-panel);
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0;
-        }
-
-        .btn-icon-only {
-            background-color: var(--bg-card);
             color: var(--text-main);
-            border: 1px solid var(--border);
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            flex-shrink: 0;
-            transition: all 0.15s;
-            position: relative;
+        }
+        .icon-btn:active { background-color: var(--bg-hover); }
+
+        .save-status {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            display: none; /* Скрываем на мобильных, чтобы не мешало, как в iOS */
         }
 
-        .btn-icon-only:active { transform: scale(0.95); border-color: var(--accent); }
+        /* --- Табы открытых файлов --- */
+        .editor-topbar {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: var(--bg-main);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .editor-topbar::-webkit-scrollbar { display: none; }
 
-        .tabs-bar { flex: 1; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
-        .tabs-bar::-webkit-scrollbar { display: none; }
+        .tabs-bar { display: flex; gap: 8px; }
 
         .tab-chip {
             display: flex;
             align-items: center;
             gap: 6px;
-            padding: 7px 11px;
-            background-color: var(--bg-card);
+            padding: 6px 12px;
+            background-color: var(--bg-panel);
             border: 1px solid var(--border);
-            border-radius: 9px;
+            border-radius: 8px;
             font-size: 0.85rem;
+            font-weight: 500;
             color: var(--text-muted);
             white-space: nowrap;
             cursor: pointer;
-            position: relative;
+            transition: all 0.2s;
         }
 
-        .tab-chip.active { color: var(--text-main); border-color: var(--accent); background-color: rgba(139, 92, 246, 0.14); }
+        .tab-chip.active { 
+            color: var(--accent); 
+            border-color: var(--accent); 
+            background-color: rgba(0, 122, 255, 0.05); 
+        }
 
         .tab-close {
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 20px;
-            height: 20px;
-            margin-left: 2px;
-            border-radius: 4px;
+            width: 16px;
+            height: 16px;
+            margin-left: 4px;
+            border-radius: 50%;
             color: var(--text-muted);
-            font-size: 0.75rem;
-            transition: all 0.15s;
+            font-size: 0.7rem;
         }
+        .tab-close:active { background-color: rgba(0,0,0,0.1); }
 
-        .tab-close:hover, .tab-close:active { background-color: rgba(255, 255, 255, 0.1); color: var(--danger); }
-
+        /* --- Редактор --- */
         .editor-body { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; background-color: var(--bg-main); }
 
         .editor-action-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 12px;
-            background-color: var(--bg-panel);
-            border-bottom: 1px solid var(--border);
-            z-index: 10;
-            flex-shrink: 0;
+            display: none; /* В новом дизайне панель действий перенесена вниз или скрыта */
         }
-
-        .action-group { display: flex; gap: 8px; width: 100%; justify-content: space-between; }
-
-        .btn-action {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            height: 34px;
-            padding: 0;
-            width: 34px;
-            border-radius: 8px;
-            font-size: 0.88rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s;
-            border: 1px solid transparent;
-            flex-shrink: 0;
-        }
-
-        .btn-action:active { transform: scale(0.96); }
-        .btn-icon { background-color: var(--bg-card); color: var(--text-main); border-color: var(--border); }
-        .btn-icon:active { border-color: var(--accent); color: var(--accent); }
-        .btn-run { background-color: var(--accent); color: #fff; box-shadow: 0 2px 8px var(--accent-glow); }
 
         .editor-content { flex: 1; display: flex; position: relative; overflow: hidden; width: 100%; }
 
@@ -259,41 +206,80 @@
             font-family: var(--editor-font-family);
             font-size: var(--editor-font-size);
             background-color: var(--bg-main);
+            color: var(--text-main);
         }
         
         .CodeMirror-gutters {
-            background-color: #101016 !important;
+            background-color: var(--bg-main) !important;
             border-right: 1px solid var(--border) !important;
         }
-
-        .CodeMirror-linenumber {
-            color: #52566b;
-        }
-
-        .CodeMirror-cursor {
-            border-left: 2px solid var(--accent) !important;
-        }
-        
-        .CodeMirror-activeline-background {
-            background: rgba(255, 255, 255, 0.03) !important;
-        }
-        
-        .CodeMirror-selected {
-            background: rgba(139, 92, 246, 0.3) !important;
-        }
+        .CodeMirror-linenumber { color: #b0b0b5; }
+        .CodeMirror-cursor { border-left: 2px solid var(--accent) !important; }
+        .CodeMirror-activeline-background { background: rgba(0, 0, 0, 0.02) !important; }
+        .CodeMirror-selected { background: rgba(0, 122, 255, 0.2) !important; }
 
         .edge-swipe-area { position: absolute; left: 0; top: 0; bottom: 0; width: 24px; z-index: 15; touch-action: pan-y; }
 
+        /* --- Нижняя навигация (Bottom Nav) --- */
+        .bottom-nav {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background-color: var(--bg-main);
+            border-top: 1px solid var(--border);
+            padding-bottom: env(safe-area-inset-bottom);
+            height: var(--nav-height);
+            flex-shrink: 0;
+            z-index: 40;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            font-weight: 500;
+            gap: 4px;
+            cursor: pointer;
+            width: 60px;
+            height: 100%;
+        }
+        .nav-item i { font-size: 1.3rem; }
+        .nav-item.active { color: var(--accent); }
+        .nav-item:active { opacity: 0.7; }
+
+        .nav-item.fab {
+            position: relative;
+            top: -12px;
+        }
+        .nav-item.fab .fab-inner {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: var(--accent);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4);
+        }
+        .nav-item.fab:active .fab-inner { background-color: var(--accent-hover); transform: scale(0.95); }
+
+        /* --- Боковое меню (Файлы / Explorer) --- */
         .drawer-backdrop {
             position: absolute;
             inset: 0;
-            background: rgba(0, 0, 0, 0.65);
+            background: rgba(0, 0, 0, 0.3);
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.22s ease;
             z-index: 20;
         }
-
         .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
 
         .file-drawer {
@@ -301,8 +287,8 @@
             top: 0;
             bottom: 0;
             left: 0;
-            width: 84%;
-            max-width: 340px;
+            width: 85%;
+            max-width: 320px;
             background-color: var(--bg-panel);
             border-right: 1px solid var(--border);
             display: flex;
@@ -312,40 +298,38 @@
             z-index: 30;
             touch-action: pan-y;
         }
-
         .file-drawer.open { transform: translateX(0); }
 
         .file-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 6px;
-            padding: 12px 12px;
+            padding: 16px;
+            background-color: var(--bg-panel);
             border-bottom: 1px solid var(--border);
-            background-color: var(--bg-main);
+            padding-top: calc(16px + env(safe-area-inset-top));
         }
 
-        .header-title { display: flex; align-items: center; gap: 8px; font-size: 1.05rem; font-weight: 700; color: var(--accent); }
-        .header-actions { display: flex; gap: 6px; align-items: center; }
+        .header-title { font-size: 1rem; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 8px;}
+        .header-actions { display: flex; gap: 8px; align-items: center; }
 
         .btn-primary {
             background-color: var(--accent);
             color: #fff;
             border: none;
-            padding: 8px 12px;
-            border-radius: 10px;
-            font-size: 0.88rem;
-            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
         }
-
         .btn-primary:active { background-color: var(--accent-hover); }
 
         .btn-secondary {
-            background-color: var(--bg-card);
+            background-color: var(--bg-main);
             color: var(--text-main);
             border: 1px solid var(--border);
             padding: 11px;
@@ -356,92 +340,72 @@
             cursor: pointer;
         }
 
-        .search-box { padding: 10px 14px 6px; position: relative; }
-
-        .search-box i {
-            position: absolute;
-            left: 25px;
-            top: calc(50% + 2px);
-            transform: translateY(-50%);
-            color: var(--text-muted);
-            font-size: 0.82rem;
-        }
-
+        .search-box { padding: 12px 16px 4px; position: relative; }
+        .search-box i { position: absolute; left: 26px; top: calc(50% + 4px); transform: translateY(-50%); color: var(--text-muted); font-size: 0.85rem; }
         .search-box input {
             width: 100%;
             background-color: var(--bg-main);
             border: 1px solid var(--border);
-            padding: 9px 10px 9px 32px;
+            padding: 10px 10px 10px 34px;
             border-radius: 10px;
             color: var(--text-main);
             outline: none;
-            font-size: 0.88rem;
+            font-size: 0.9rem;
         }
-
         .search-box input:focus { border-color: var(--accent); }
 
-        .file-tree-container { flex: 1; overflow-y: auto; padding: 8px 14px 14px; touch-action: pan-y; }
+        .file-tree-container { flex: 1; overflow-y: auto; padding: 8px 12px 14px; touch-action: pan-y; }
 
         .tree-item {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 9px 10px;
-            margin-bottom: 6px;
-            background-color: var(--bg-card);
-            border: 1px solid transparent;
-            border-radius: 11px;
+            padding: 10px 12px;
+            margin-bottom: 2px;
+            background-color: transparent;
+            border-radius: 8px;
             cursor: pointer;
         }
-
-        .tree-item.active { border-color: var(--accent); background-color: rgba(139, 92, 246, 0.14); }
+        .tree-item:hover { background-color: var(--bg-hover); }
+        .tree-item.active { background-color: rgba(0, 122, 255, 0.1); }
 
         .tree-info { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
-        .tree-info span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem; }
+        .tree-info span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem; color: var(--text-main); font-weight: 500; }
 
-        .chevron-icon { font-size: 0.68rem; color: var(--text-muted); width: 10px; transition: transform 0.2s; }
+        .chevron-icon { font-size: 0.7rem; color: var(--text-muted); width: 12px; transition: transform 0.2s; }
         .chevron-icon.rotated { transform: rotate(90deg); }
 
-        .folder-children { padding-left: 14px; border-left: 1px dashed var(--border); margin-left: 12px; margin-bottom: 6px; display: none; }
+        .folder-children { padding-left: 16px; margin-left: 12px; display: none; position: relative; }
+        .folder-children::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 1px; background-color: var(--border);
+        }
         .folder-children.open { display: block; }
 
         .tree-actions { display: flex; gap: 4px; margin-left: 6px; }
+        .action-icon { background: transparent; border: none; color: var(--text-muted); width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.8rem; }
+        .action-icon:active { background-color: rgba(0,0,0,0.1); }
 
-        .action-icon {
-            background-color: rgba(255, 255, 255, 0.05);
-            border: none;
-            color: var(--text-muted);
-            width: 28px;
-            height: 28px;
-            border-radius: 7px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-
-        .action-icon.delete:hover { color: var(--danger); background-color: rgba(239, 68, 68, 0.15); }
-
+        /* Иконки файлов (цвета из скриншота) */
         .icon-html { color: #e34c26; }
-        .icon-css { color: #38bdf8; }
-        .icon-js { color: #facc15; }
+        .icon-css { color: #264de4; }
+        .icon-js { color: #f7df1e; text-shadow: 0 0 1px rgba(0,0,0,0.3); }
         .icon-json { color: #4ade80; }
-        .icon-folder { color: #a78bfa; }
+        .icon-folder { color: #007aff; }
         .icon-default { color: var(--text-muted); }
 
         .project-stats {
-            padding: 7px 14px;
-            font-size: 0.76rem;
+            padding: 8px 16px;
+            font-size: 0.75rem;
             color: var(--text-muted);
-            background-color: var(--bg-main);
+            background-color: var(--bg-panel);
             border-top: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
         }
 
-        .file-footer { padding: 10px 14px 14px; background-color: var(--bg-main); }
+        .file-footer { padding: 12px 16px; background-color: var(--bg-panel); border-top: 1px solid var(--border); }
 
+        /* --- Предпросмотр --- */
         .preview-overlay {
             position: absolute;
             inset: 0;
@@ -452,472 +416,240 @@
             transition: transform 0.25s ease;
             z-index: 40;
         }
-
         .preview-overlay.open { transform: translateY(0); }
 
         .preview-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 14px;
-            background-color: var(--bg-main);
+            padding: 12px 16px;
+            background-color: var(--bg-panel);
             color: var(--text-main);
             border-bottom: 1px solid var(--border);
             gap: 8px;
             position: relative;
             z-index: 10;
         }
+        .preview-frame { flex: 1; width: 100%; border: none; background: #fff; position: relative; z-index: 5; }
 
-        .preview-frame { 
-            flex: 1; 
-            width: 100%; 
-            border: none; 
-            background: #fff; 
-            position: relative;
-            z-index: 5;
-        }
-
+        /* --- Консоль (Terminal) --- */
         .console-panel {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            height: 45%;
-            background-color: var(--bg-panel);
+            height: 50%;
+            background-color: var(--bg-main);
             border-top: 1px solid var(--border);
             display: flex;
             flex-direction: column;
             transform: translateY(100%);
             transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
             z-index: 50;
-            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
         }
-
         .console-panel.open { transform: translateY(0); }
 
         .console-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 14px;
+            padding: 0 16px;
             background-color: var(--bg-main);
             border-bottom: 1px solid var(--border);
             font-size: 0.85rem;
             font-weight: 600;
-            color: var(--accent);
+            color: var(--text-muted);
+            height: 44px;
         }
 
-        .console-header-actions { display: flex; gap: 8px; }
+        .console-tabs { display: flex; height: 100%; gap: 16px; }
+        .console-tab { display: flex; align-items: center; height: 100%; border-bottom: 2px solid transparent; cursor: pointer; }
+        .console-tab.active { color: var(--text-main); border-bottom-color: var(--accent); }
 
+        .console-header-actions { display: flex; gap: 12px; }
         .console-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.9rem; padding: 4px; }
         .console-btn:active { color: var(--accent); }
 
         .console-output {
             flex: 1;
             overflow-y: auto;
-            padding: 8px 14px;
+            padding: 12px 16px;
             font-family: var(--editor-font-family);
             font-size: 12px;
-            line-height: 1.4;
+            line-height: 1.5;
+            background-color: var(--bg-main);
+            color: var(--text-main);
         }
 
-        .console-line {
-            padding: 4px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            word-wrap: break-word;
-            white-space: pre-wrap;
-            display: flex;
-            gap: 6px;
-            align-items: flex-start;
-        }
-
-        .console-line i { margin-top: 2px; font-size: 10px; }
-
+        .console-line { padding: 2px 0; display: flex; gap: 8px; align-items: flex-start; word-wrap: break-word; white-space: pre-wrap; }
+        .console-line i { margin-top: 3px; font-size: 10px; }
         .console-line.log { color: var(--text-main); }
         .console-line.info { color: var(--info); }
-        .console-line.warn { color: var(--warn); background: rgba(250, 204, 21, 0.1); }
-        .console-line.error { color: var(--danger); background: rgba(239, 68, 68, 0.1); }
+        .console-line.warn { color: #b58900; }
+        .console-line.error { color: var(--danger); }
         .console-line .stack { display: block; color: var(--text-muted); font-size: 11px; margin-top: 4px; }
 
         .console-dot {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--danger);
-            display: none;
+            position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); display: none;
         }
-
         .console-dot.show { display: block; }
 
+        /* --- Контекстное меню --- */
         .custom-context-menu {
             position: fixed;
-            background-color: var(--bg-card);
+            background-color: var(--bg-main);
             border: 1px solid var(--border);
             border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
             display: none;
             flex-direction: column;
             padding: 6px;
             z-index: 9999;
             min-width: 160px;
-            backdrop-filter: blur(8px);
         }
-
         .custom-context-menu.open { display: flex; }
-
         .context-menu-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 12px;
-            font-size: 0.9rem;
-            color: var(--text-main);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.15s;
-            background: transparent;
-            border: none;
-            width: 100%;
-            text-align: left;
+            display: flex; align-items: center; gap: 10px; padding: 10px 12px; font-size: 0.9rem;
+            color: var(--text-main); border-radius: 8px; cursor: pointer; background: transparent; border: none; width: 100%; text-align: left;
         }
-
         .context-menu-item:hover { background-color: var(--bg-hover); color: var(--accent); }
         .context-menu-item i { width: 16px; text-align: center; color: var(--text-muted); }
-        .context-menu-item:hover i { color: var(--accent); }
 
-        .symbol-bar {
-            display: flex;
-            gap: 6px;
-            padding: 8px 10px;
-            background-color: var(--bg-panel);
-            border-top: 1px solid var(--border);
-            overflow-x: auto;
-            scrollbar-width: none;
-            flex-shrink: 0;
-            position: relative;
-            z-index: 20;
-        }
-
-        .symbol-bar::-webkit-scrollbar { display: none; }
-
-        .sym-btn {
-            background-color: var(--bg-card);
-            color: var(--text-main);
-            border: 1px solid var(--border);
-            min-width: 36px;
-            height: 34px;
-            padding: 0 10px;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-
-        .sym-btn:active { background-color: var(--accent); border-color: var(--accent); }
-
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(3px);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-            z-index: 1000;
-            padding: 16px;
-        }
-
-        .modal-overlay.open { opacity: 1; pointer-events: auto; }
-
-        .modal-card {
-            background-color: var(--bg-card);
-            width: 92%;
-            max-width: 340px;
-            padding: 18px;
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .modal-type-select { display: flex; gap: 8px; }
-
-        .type-btn {
-            flex: 1;
-            background: var(--bg-main);
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-            padding: 8px;
-            border-radius: 9px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.88rem;
-        }
-
-        .type-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-        .modal-field { display: flex; flex-direction: column; gap: 5px; }
-        .modal-field label { font-size: 0.78rem; color: var(--text-muted); }
-
-        .modal-card input,
-        .modal-card select {
-            width: 100%;
-            background: var(--bg-main);
-            border: 1px solid var(--border);
-            padding: 10px 12px;
-            border-radius: 10px;
-            color: var(--text-main);
-            font-size: 0.92rem;
-            outline: none;
-        }
-
-        .modal-actions { display: flex; gap: 8px; margin-top: 4px; }
-        .modal-actions button { flex: 1; justify-content: center; }
-
-        .modal-check { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
-        .modal-check input { width: 18px; height: 18px; }
-
-        .export-options {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .export-option {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px;
-            background: var(--bg-main);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            cursor: pointer;
-            text-align: left;
-            transition: all 0.15s;
-            color: var(--text-main);
-            width: 100%;
-            font-family: inherit;
-        }
-
-        .export-option:active {
-            border-color: var(--accent);
-            background: var(--bg-hover);
-            transform: scale(0.98);
-        }
-
-        .export-option-icon {
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
-            background: rgba(139, 92, 246, 0.15);
-            color: var(--accent);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            font-size: 1rem;
-        }
-
-        .export-option-text {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            min-width: 0;
-            flex: 1;
-        }
-
-        .export-option-text strong {
-            font-size: 0.92rem;
-            font-weight: 600;
-        }
-
-        .export-option-text span {
-            font-size: 0.76rem;
-            color: var(--text-muted);
-        }
-
+        /* --- Панель поиска --- */
         .search-panel {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 25;
-            background: var(--bg-panel);
-            border-bottom: 1px solid var(--border);
-            padding: 8px 10px;
-            display: none;
-            flex-direction: column;
-            gap: 6px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+            position: absolute; top: 0; left: 0; right: 0; z-index: 25;
+            background: var(--bg-main); border-bottom: 1px solid var(--border);
+            padding: 10px 12px; display: none; flex-direction: column; gap: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
-
         .search-panel.open { display: flex; }
-
-        .search-row { display: flex; gap: 6px; align-items: center; }
-
+        .search-row { display: flex; gap: 8px; align-items: center; }
         .search-row input {
-            flex: 1;
-            min-width: 0;
-            background: var(--bg-main);
-            border: 1px solid var(--border);
-            border-radius: 9px;
-            color: var(--text-main);
-            padding: 8px 10px;
-            font-size: 0.88rem;
-            outline: none;
+            flex: 1; min-width: 0; background: var(--bg-panel); border: 1px solid var(--border);
+            border-radius: 8px; color: var(--text-main); padding: 8px 10px; font-size: 0.85rem; outline: none;
         }
-
         .search-row input:focus { border-color: var(--accent); }
-
-        .search-count { font-size: 0.75rem; color: var(--text-muted); min-width: 48px; text-align: center; }
-
+        .search-count { font-size: 0.75rem; color: var(--text-muted); min-width: 40px; text-align: center; }
         .search-btn {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            flex-shrink: 0;
+            background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main);
+            width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
         }
-
         .search-btn:active { border-color: var(--accent); color: var(--accent); }
         .search-btn.wide { width: auto; padding: 0 10px; font-size: 0.8rem; font-weight: 600; }
 
+        /* --- Тосты --- */
         .toast-container {
-            position: fixed;
-            left: 50%;
-            transform: translateX(-50%);
-            bottom: calc(env(safe-area-inset-bottom) + 74px);
-            z-index: 3000;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            width: min(92%, 420px);
-            pointer-events: none;
+            position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 80px);
+            z-index: 3000; display: flex; flex-direction: column; gap: 8px; width: min(92%, 420px); pointer-events: none;
         }
-
         .toast {
-            pointer-events: auto;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-left: 3px solid var(--accent);
-            border-radius: 12px;
-            padding: 11px 12px;
-            font-size: 0.86rem;
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
-            animation: toast-in 0.18s ease;
+            pointer-events: auto; display: flex; align-items: center; gap: 10px;
+            background: var(--bg-main); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+            border-radius: 12px; padding: 12px; font-size: 0.85rem; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            animation: toast-in 0.2s ease; color: var(--text-main);
         }
-
         .toast.error { border-left-color: var(--danger); }
         .toast.success { border-left-color: var(--success); }
         .toast.warn { border-left-color: var(--warn); }
         .toast span { flex: 1; }
+        .toast button { background: transparent; border: none; color: var(--accent); font-weight: 600; font-size: 0.8rem; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+        @keyframes toast-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .toast button {
-            background: transparent;
-            border: none;
-            color: var(--accent);
-            font-weight: 700;
-            font-size: 0.82rem;
-            cursor: pointer;
-            padding: 4px 6px;
-            border-radius: 6px;
-            white-space: nowrap;
+        /* --- Модалки --- */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(2px);
+            display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none;
+            transition: opacity 0.2s; z-index: 1000; padding: 16px;
         }
-
-        .toast button:active { background: rgba(139, 92, 246, 0.15); }
-
-        @keyframes toast-in {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .modal-overlay.open { opacity: 1; pointer-events: auto; }
+        .modal-card {
+            background-color: var(--bg-main); width: 92%; max-width: 340px; padding: 20px;
+            border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 16px; max-height: 80vh; overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
+        .modal-type-select { display: flex; gap: 8px; background: var(--bg-panel); padding: 4px; border-radius: 10px; }
+        .type-btn {
+            flex: 1; background: transparent; border: none; color: var(--text-muted);
+            padding: 8px; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 0.9rem; transition: all 0.2s;
+        }
+        .type-btn.active { background: var(--bg-main); color: var(--text-main); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .modal-field { display: flex; flex-direction: column; gap: 6px; }
+        .modal-field label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+        .modal-card input, .modal-card select {
+            width: 100%; background: var(--bg-panel); border: 1px solid var(--border);
+            padding: 12px; border-radius: 10px; color: var(--text-main); font-size: 0.95rem; outline: none;
+        }
+        .modal-card input:focus, .modal-card select:focus { border-color: var(--accent); background: var(--bg-main); }
+        .modal-actions { display: flex; gap: 12px; margin-top: 4px; }
+        .modal-actions button { flex: 1; justify-content: center; }
+        .modal-check { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
+        .modal-check input { width: 18px; height: 18px; }
 
-        .hidden-file-input {
-            position: fixed;
-            left: -9999px;
-            top: 0;
-            opacity: 0;
-            width: 1px;
-            height: 1px;
+        .export-options { display: flex; flex-direction: column; gap: 10px; }
+        .export-option {
+            display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg-panel);
+            border: 1px solid var(--border); border-radius: 12px; cursor: pointer; text-align: left; color: var(--text-main); width: 100%;
+        }
+        .export-option:active { border-color: var(--accent); background: var(--bg-main); }
+        .export-option-icon {
+            width: 40px; height: 40px; border-radius: 10px; background: rgba(0, 122, 255, 0.1);
+            color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+        }
+        .export-option-text { display: flex; flex-direction: column; gap: 2px; }
+        .export-option-text strong { font-size: 0.95rem; font-weight: 600; }
+        .export-option-text span { font-size: 0.75rem; color: var(--text-muted); }
+
+        .hidden-file-input { position: fixed; left: -9999px; top: 0; opacity: 0; width: 1px; height: 1px; }
+
+        /* Прячем старую панель символов, так как в новом дизайне она не нужна на виду */
+        .symbol-bar { display: none; }
+        
+        /* Стили для поиска в дереве */
+        .active-file-indicator {
+            position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px; background: var(--accent); border-radius: 0 4px 4px 0;
         }
     </style>
 </head>
 <body>
 
 <div class="workspace" id="workspace">
+    <!-- Верхняя шапка -->
     <div class="brand-header">
-        <button class="logo-btn" id="resetCacheBtn" title="Сбросить кэш и перезагрузить" aria-label="Сбросить кэш и перезагрузить">
-            <img src="logo.png" alt="CodeDock Studio" class="brand-logo">
-        </button>
-        <div class="brand-right">
-            <div class="save-status" id="saveStatus" aria-live="polite"></div>
-            <button class="btn-icon-only" id="consoleBtn" title="Консоль" aria-label="Консоль">
-                <i class="fa-solid fa-terminal"></i>
-                <span class="console-dot" id="consoleDot"></span>
+        <div class="header-left">
+            <button class="icon-btn" id="openDrawerBtn" title="Файлы" aria-label="Файлы">
+                <i class="fa-solid fa-bars"></i>
             </button>
-            <button class="btn-icon-only btn-run" id="runProjectBtn" title="Предпросмотр" aria-label="Предпросмотр">
-                <i class="fa-solid fa-play"></i>
+        </div>
+        <div class="header-title">CodeDock</div>
+        <div class="header-right">
+            <div class="save-status" id="saveStatus" aria-live="polite"></div>
+            <button class="icon-btn" id="searchBtn" title="Поиск" aria-label="Поиск">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </button>
+            <button class="icon-btn" id="settingsBtn" title="Настройки" aria-label="Настройки">
+                <i class="fa-solid fa-ellipsis-vertical"></i>
             </button>
         </div>
     </div>
 
+    <!-- Табы -->
     <header class="editor-topbar">
-        <button class="btn-icon-only" id="openDrawerBtn" title="Файлы проекта" aria-label="Файлы проекта">
-            <i class="fa-solid fa-folder-tree"></i>
-        </button>
         <div class="tabs-bar" id="tabsBar"></div>
     </header>
 
     <main class="editor-body">
-        <div class="editor-action-bar">
-            <div class="action-group">
-                <button class="btn-action btn-icon" id="undoBtn" title="Отменить" aria-label="Отменить">
-                    <i class="fa-solid fa-rotate-left"></i>
-                </button>
-                <button class="btn-action btn-icon" id="redoBtn" title="Повторить" aria-label="Повторить">
-                    <i class="fa-solid fa-rotate-right"></i>
-                </button>
-                <button class="btn-action btn-icon" id="searchBtn" title="Поиск и замена" aria-label="Поиск и замена">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                </button>
-                <button class="btn-action btn-icon" id="settingsBtn" title="Настройки" aria-label="Настройки">
-                    <i class="fa-solid fa-gear"></i>
-                </button>
-                <button class="btn-action btn-icon" id="saveProjectBtn" title="Сохранить" aria-label="Сохранить">
-                    <i class="fa-solid fa-floppy-disk"></i>
-                </button>
-            </div>
-        </div>
-
+        <!-- Панель поиска (скрыта по умолчанию) -->
         <div class="search-panel" id="searchPanel">
             <div class="search-row">
                 <input type="text" id="searchInput" placeholder="Найти в файле" autocomplete="off" autocapitalize="off" autocorrect="off">
                 <span class="search-count" id="searchCount">0/0</span>
-                <button class="search-btn" id="searchPrev" title="Предыдущее" aria-label="Предыдущее"><i class="fa-solid fa-chevron-up"></i></button>
-                <button class="search-btn" id="searchNext" title="Следующее" aria-label="Следующее"><i class="fa-solid fa-chevron-down"></i></button>
-                <button class="search-btn" id="searchClose" title="Закрыть" aria-label="Закрыть"><i class="fa-solid fa-xmark"></i></button>
+                <button class="search-btn" id="searchPrev" title="Предыдущее"><i class="fa-solid fa-chevron-up"></i></button>
+                <button class="search-btn" id="searchNext" title="Следующее"><i class="fa-solid fa-chevron-down"></i></button>
+                <button class="search-btn" id="searchClose" title="Закрыть"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="search-row">
-                <input type="text" id="replaceInput" placeholder="Заменить на" autocomplete="off" autocapitalize="off" autocorrect="off">
+                <input type="text" id="replaceInput" placeholder="Заменить на" autocomplete="off">
                 <button class="search-btn wide" id="replaceOne">Заменить</button>
                 <button class="search-btn wide" id="replaceAll">Все</button>
             </div>
@@ -930,24 +662,19 @@
 
         <div class="drawer-backdrop" id="drawerBackdrop"></div>
 
+        <!-- Боковое меню (Файлы) -->
         <aside class="file-drawer" id="fileDrawer" aria-label="Файлы проекта">
             <div class="file-header">
                 <div class="header-title">
-                    <i class="fa-solid fa-folder-tree"></i>
-                    <span>Файлы</span>
+                    <i class="fa-solid fa-folder-open" style="color:var(--accent)"></i>
+                    <span>Explorer</span>
                 </div>
                 <div class="header-actions">
-                    <button class="btn-icon-only" style="width:32px;height:32px;" id="importBtn" title="Импорт проекта" aria-label="Импорт проекта">
-                        <i class="fa-solid fa-file-arrow-up"></i>
-                    </button>
-                    <button class="btn-icon-only" style="width:32px;height:32px;" id="exportZipBtn" title="Экспорт" aria-label="Экспорт">
-                        <i class="fa-solid fa-file-arrow-down"></i>
-                    </button>
-                    <button class="btn-icon-only" style="width:32px;height:32px;" id="collapseAllBtn" title="Свернуть папки" aria-label="Свернуть папки">
-                        <i class="fa-solid fa-angles-up"></i>
-                    </button>
+                    <button class="icon-btn" id="importBtn" title="Импорт проекта" style="font-size:1rem"><i class="fa-solid fa-file-arrow-up"></i></button>
+                    <button class="icon-btn" id="exportZipBtn" title="Экспорт" style="font-size:1rem"><i class="fa-solid fa-file-arrow-down"></i></button>
+                    <button class="icon-btn" id="collapseAllBtn" title="Свернуть все" style="font-size:1rem"><i class="fa-solid fa-angles-up"></i></button>
                     <button class="btn-primary" id="openCreateModal">
-                        <i class="fa-solid fa-plus"></i> Новый
+                        <i class="fa-solid fa-plus"></i>
                     </button>
                 </div>
             </div>
@@ -966,32 +693,44 @@
         </aside>
     </main>
 
-    <div class="symbol-bar" id="symbolBar">
-        <button class="sym-btn" data-sym="  ">TAB</button>
-        <button class="sym-btn" data-sym="{">{</button>
-        <button class="sym-btn" data-sym="}">}</button>
-        <button class="sym-btn" data-sym="(">(</button>
-        <button class="sym-btn" data-sym=")">)</button>
-        <button class="sym-btn" data-sym="<">&lt;</button>
-        <button class="sym-btn" data-sym=">">&gt;</button>
-        <button class="sym-btn" data-sym="/">/</button>
-        <button class="sym-btn" data-sym="=">=</button>
-        <button class="sym-btn" data-sym='"'>"</button>
-        <button class="sym-btn" data-sym=";">;</button>
-    </div>
+    <!-- Нижняя навигация (Bottom Nav) -->
+    <nav class="bottom-nav">
+        <button class="nav-item" id="navFilesBtn">
+            <i class="fa-solid fa-folder"></i>
+            <span>Files</span>
+        </button>
+        <button class="nav-item" id="navSearchBtn">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <span>Search</span>
+        </button>
+        <button class="nav-item fab" id="navNewBtn">
+            <div class="fab-inner">
+                <i class="fa-solid fa-plus"></i>
+            </div>
+        </button>
+        <button class="nav-item" id="runProjectBtn">
+            <i class="fa-solid fa-play"></i>
+            <span>Run</span>
+        </button>
+        <button class="nav-item" id="navSettingsBtn">
+            <i class="fa-solid fa-gear"></i>
+            <span>Settings</span>
+        </button>
+    </nav>
 
+    <!-- Предпросмотр -->
     <div class="preview-overlay" id="previewOverlay">
         <div class="preview-bar">
             <span style="font-weight:600;font-size:0.95rem;display:flex;align-items:center;">
-                <i class="fa-solid fa-globe" style="color:var(--accent);margin-right:6px;"></i>Предпросмотр
+                <i class="fa-solid fa-globe" style="color:var(--accent);margin-right:8px;"></i>Предпросмотр
             </span>
             <div style="display:flex;gap:8px;align-items:center;">
-                <button type="button" class="btn-icon-only" id="previewConsoleBtn" title="Консоль" aria-label="Консоль" style="width:32px;height:32px;">
+                <button type="button" class="icon-btn" id="previewConsoleBtn" title="Консоль" style="border:1px solid var(--border); border-radius:8px; width:36px; height:36px; position:relative;">
                     <i class="fa-solid fa-terminal"></i>
                     <span class="console-dot" id="previewConsoleDot"></span>
                 </button>
-                <!-- Кнопка возврата: перевёрнутый на 180 градусов треугольник -->
-                <button type="button" class="btn-icon-only btn-run" id="closePreviewBtn" title="В редактор" aria-label="В редактор" style="width:32px;height:32px;position:relative;z-index:100;">
+                <!-- Кнопка возврата -->
+                <button type="button" class="icon-btn" id="closePreviewBtn" title="В редактор" style="background:var(--accent); color:#fff; border-radius:8px; width:36px; height:36px; position:relative; z-index:100;">
                     <i class="fa-solid fa-play" style="transform: rotate(180deg);"></i>
                 </button>
             </div>
@@ -999,12 +738,17 @@
         <iframe class="preview-frame" id="previewFrame" title="Предпросмотр проекта" sandbox="allow-scripts allow-modals"></iframe>
     </div>
 
+    <!-- Консоль / Терминал -->
     <div class="console-panel" id="consolePanel" aria-label="Консоль">
         <div class="console-header">
-            <span><i class="fa-solid fa-terminal"></i> Консоль</span>
+            <div class="console-tabs">
+                <div class="console-tab active">Terminal</div>
+                <div class="console-tab">Problems</div>
+                <div class="console-tab">Output</div>
+            </div>
             <div class="console-header-actions">
-                <button class="console-btn" id="clearConsoleBtn" title="Очистить" aria-label="Очистить консоль"><i class="fa-solid fa-trash"></i></button>
-                <button class="console-btn" id="closeConsoleBtn" title="Закрыть" aria-label="Закрыть консоль"><i class="fa-solid fa-xmark"></i></button>
+                <button class="console-btn" id="clearConsoleBtn" title="Очистить"><i class="fa-solid fa-trash"></i></button>
+                <button class="console-btn" id="closeConsoleBtn" title="Закрыть"><i class="fa-solid fa-xmark"></i></button>
             </div>
         </div>
         <div class="console-output" id="consoleOutput"></div>
@@ -1012,6 +756,7 @@
 
 </div>
 
+<!-- Контекстное меню -->
 <div class="custom-context-menu" id="customContextMenu" role="menu">
     <button class="context-menu-item" id="ctxSelectAll" role="menuitem"><i class="fa-solid fa-check-double"></i> Выделить всё</button>
     <button class="context-menu-item" id="ctxCut" role="menuitem"><i class="fa-solid fa-cut"></i> Вырезать</button>
@@ -1020,9 +765,10 @@
     <button class="context-menu-item" id="ctxClear" style="color:var(--danger);" role="menuitem"><i class="fa-regular fa-trash-can" style="color:var(--danger);"></i> Очистить</button>
 </div>
 
-<div class="modal-overlay" id="createModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+<!-- Модалка создания -->
+<div class="modal-overlay" id="createModal" role="dialog" aria-modal="true">
     <div class="modal-card">
-        <h3 id="modalTitle" style="font-size:1.05rem;">Новый элемент</h3>
+        <h3 id="modalTitle" style="font-size:1.1rem; font-weight:600;">Новый элемент</h3>
         <div class="modal-type-select" id="typeSelector">
             <button type="button" class="type-btn active" data-type="file">
                 <i class="fa-regular fa-file"></i> Файл
@@ -1034,23 +780,24 @@
         <div class="modal-field" id="parentFolderField">
             <label for="parentFolderSelect">Расположение</label>
             <select id="parentFolderSelect">
-                <option value="root">/ (Корень проекта)</option>
+                <option value="root">/ (Корень)</option>
             </select>
         </div>
         <div class="modal-field">
             <label for="newItemName">Название</label>
-            <input type="text" id="newItemName" placeholder="Например: app.js или assets" autocomplete="off" autocapitalize="off" autocorrect="off">
+            <input type="text" id="newItemName" placeholder="Например: app.js" autocomplete="off" autocapitalize="off">
         </div>
         <div class="modal-actions">
             <button type="button" class="btn-secondary" id="cancelModal">Отмена</button>
-            <button type="button" class="btn-primary" id="confirmCreate">Сохранить</button>
+            <button type="button" class="btn-primary" id="confirmCreate" style="padding:12px">Сохранить</button>
         </div>
     </div>
 </div>
 
-<div class="modal-overlay" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+<!-- Модалка настроек -->
+<div class="modal-overlay" id="settingsModal" role="dialog" aria-modal="true">
     <div class="modal-card">
-        <h3 id="settingsTitle" style="font-size:1.05rem;">Настройки</h3>
+        <h3 style="font-size:1.1rem; font-weight:600;">Настройки</h3>
         <div class="modal-field">
             <label for="fontSizeSelect">Размер шрифта</label>
             <select id="fontSizeSelect">
@@ -1074,20 +821,21 @@
         </label>
         <div class="modal-actions">
             <button type="button" class="btn-secondary" id="exportJsonBtn">Скачать JSON</button>
-            <button type="button" class="btn-primary" id="closeSettingsBtn">Готово</button>
+            <button type="button" class="btn-primary" id="closeSettingsBtn" style="padding:12px">Готово</button>
         </div>
-        <button type="button" class="btn-secondary" id="resetProjectBtn" style="color: var(--danger); border-color: rgba(239,68,68,0.35);">
-            <i class="fa-solid fa-trash-can"></i> Сбросить проект к демо
+        <button type="button" class="btn-secondary" id="resetProjectBtn" style="color: var(--danger); border-color: rgba(255,59,48,0.3);">
+            <i class="fa-solid fa-trash-can"></i> Сбросить к демо
         </button>
     </div>
 </div>
 
-<div class="modal-overlay" id="exportModal" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+<!-- Модалка экспорта -->
+<div class="modal-overlay" id="exportModal" role="dialog" aria-modal="true">
     <div class="modal-card">
-        <h3 id="exportTitle" style="font-size:1.05rem;">
-            <i class="fa-solid fa-file-export" style="color:var(--accent);margin-right:6px;"></i>Экспорт проекта
+        <h3 style="font-size:1.1rem; font-weight:600;">
+            <i class="fa-solid fa-file-export" style="color:var(--accent);margin-right:8px;"></i>Экспорт
         </h3>
-        <p style="font-size:0.82rem;color:var(--text-muted);margin-top:-6px;">
+        <p style="font-size:0.85rem;color:var(--text-muted);margin-top:-8px;">
             Выберите способ сохранения
         </p>
         <div class="export-options">
@@ -1119,13 +867,14 @@
     </div>
 </div>
 
+<!-- Модалка подтверждения -->
 <div class="modal-overlay" id="confirmModal" role="dialog" aria-modal="true">
     <div class="modal-card">
-        <h3 id="confirmTitle" style="font-size:1.05rem;">Подтвердите действие</h3>
-        <p id="confirmText" style="font-size:0.9rem;color:var(--text-muted);"></p>
+        <h3 id="confirmTitle" style="font-size:1.1rem; font-weight:600;">Подтвердите действие</h3>
+        <p id="confirmText" style="font-size:0.9rem;color:var(--text-muted); line-height: 1.4;"></p>
         <div class="modal-actions">
             <button type="button" class="btn-secondary" id="confirmCancel">Отмена</button>
-            <button type="button" class="btn-primary" id="confirmOk">Подтвердить</button>
+            <button type="button" class="btn-primary" id="confirmOk" style="padding:12px">Подтвердить</button>
         </div>
     </div>
 </div>
@@ -1133,7 +882,7 @@
 <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 <input type="file" id="importFile" accept=".json,application/json" class="hidden-file-input">
 
-<!-- CodeMirror 5 JavaScript -->
+<!-- CodeMirror -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
@@ -1188,7 +937,7 @@
             cmView = CodeMirror.fromTextArea($('codeEditor'), {
                 lineNumbers: true,
                 mode: "htmlmixed",
-                theme: "dracula",
+                theme: "eclipse", // Светлая тема
                 tabSize: 2,
                 indentUnit: 2,
                 lineWrapping: true,
@@ -1247,7 +996,7 @@
 
     const DEFAULT_PROJECT = [
         { id: 'demo-index', name: 'index.html', type: 'file', content: '<!DOCTYPE html>\n<html lang="ru">\n<head>\n  <meta charset="UTF-8">\n  <link rel="stylesheet" href="style.css">\n</head>\n<body>\n  <div class="card">\n    <h1>CodeDock IDE</h1>\n    <p>Нажми кнопку ниже для проверки JS</p>\n    <button onclick="sayHi()">Нажми меня</button>\n  </div>\n  <script src="script.js"><\/script>\n</body>\n</html>' },
-        { id: 'demo-style', name: 'style.css', type: 'file', content: 'body {\n  margin: 0;\n  min-height: 100vh;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  background: #13131a;\n  color: #fff;\n  font-family: sans-serif;\n}\n.card {\n  background: #1f1f2c;\n  padding: 24px;\n  border-radius: 16px;\n  text-align: center;\n  border: 1px solid #8b5cf6;\n}\nbutton {\n  background: #8b5cf6;\n  color: #fff;\n  border: none;\n  padding: 10px 18px;\n  border-radius: 10px;\n  font-size: 16px;\n  margin-top: 10px;\n}' },
+        { id: 'demo-style', name: 'style.css', type: 'file', content: 'body {\n  margin: 0;\n  min-height: 100vh;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  background: #f8f9fa;\n  color: #333;\n  font-family: sans-serif;\n}\n.card {\n  background: #fff;\n  padding: 24px;\n  border-radius: 16px;\n  text-align: center;\n  border: 1px solid #e5e5ea;\n  box-shadow: 0 4px 12px rgba(0,0,0,0.05);\n}\nbutton {\n  background: #007aff;\n  color: #fff;\n  border: none;\n  padding: 10px 18px;\n  border-radius: 8px;\n  font-size: 16px;\n  margin-top: 10px;\n}' },
         { id: 'demo-script', name: 'script.js', type: 'file', content: 'function sayHi() {\n  console.log("Привет из CodeDock!");\n  console.warn("Это предупреждение");\n  console.error("А это тестовая ошибка");\n}' },
         { id: 'demo-data', name: 'data', type: 'folder', isOpen: true, children: [{ id: 'demo-json', name: 'data.json', type: 'file', content: '{\n  "app": "CodeDock",\n  "version": "3.0"\n}' }] },
     ];
@@ -1334,6 +1083,7 @@
 
     function setSaveStatus(state, text) {
         const el = $('saveStatus');
+        if (!el) return;
         el.className = `save-status ${state || ''}`;
         el.innerHTML = text || '';
     }
@@ -1351,10 +1101,10 @@
             localStorage.setItem(STORAGE.ui, JSON.stringify({ active: activeFileId, tabs: openFileIds, settings: uiSettings }));
             lastSavedAt = new Date();
             lastSavedTreeHash = digest;
-            setSaveStatus('saved', `<i class="fa-solid fa-check"></i> Сохранено в ${formatTime(lastSavedAt)}`);
+            setSaveStatus('saved', `<i class="fa-solid fa-check"></i> Сохранено`);
             return true;
         } catch (error) {
-            setSaveStatus('error', '<i class="fa-solid fa-triangle-exclamation"></i> Не сохранено');
+            setSaveStatus('error', '<i class="fa-solid fa-triangle-exclamation"></i> Ошибка');
             toast(`Ошибка сохранения: ${error.message}`, { type: 'error' });
             return false;
         }
@@ -1675,6 +1425,8 @@
     }
 
     $('searchBtn').addEventListener('click', () => (searchPanel.classList.contains('open') ? closeSearch() : openSearch()));
+    $('navSearchBtn').addEventListener('click', () => (searchPanel.classList.contains('open') ? closeSearch() : openSearch()));
+    
     $('searchClose').addEventListener('click', closeSearch);
     $('searchNext').addEventListener('click', () => goToMatch(searchIndex + 1));
     $('searchPrev').addEventListener('click', () => goToMatch(searchIndex - 1));
@@ -1706,9 +1458,9 @@
             if (settings.tabSize === 2 || settings.tabSize === 4) uiSettings.tabSize = settings.tabSize;
             uiSettings.wrap = Boolean(settings.wrap);
         }
-        $('fontSizeSelect').value = String(uiSettings.fontSize);
-        $('tabSizeSelect').value = String(uiSettings.tabSize);
-        $('wrapToggle').checked = uiSettings.wrap;
+        if ($('fontSizeSelect')) $('fontSizeSelect').value = String(uiSettings.fontSize);
+        if ($('tabSizeSelect')) $('tabSizeSelect').value = String(uiSettings.tabSize);
+        if ($('wrapToggle')) $('wrapToggle').checked = uiSettings.wrap;
         applyUiSettings();
     }
 
@@ -1726,6 +1478,8 @@
 
     const settingsModal = $('settingsModal');
     $('settingsBtn').addEventListener('click', () => { settingsModal.classList.add('open'); pushGuard(); });
+    $('navSettingsBtn').addEventListener('click', () => { settingsModal.classList.add('open'); pushGuard(); });
+    
     $('closeSettingsBtn').addEventListener('click', () => settingsModal.classList.remove('open'));
     settingsModal.addEventListener('click', (event) => { if (event.target === settingsModal) settingsModal.classList.remove('open'); });
 
@@ -1847,8 +1601,6 @@
     }
 
     const consolePanel = new CodeDockConsole();
-    $('consoleBtn').addEventListener('click', () => consolePanel.toggle());
-    $('previewConsoleBtn').addEventListener('click', () => consolePanel.toggle());
     $('closeConsoleBtn').addEventListener('click', () => consolePanel.close());
     $('clearConsoleBtn').addEventListener('click', () => consolePanel.clear());
 
@@ -1876,13 +1628,14 @@
 
     $('runProjectBtn').addEventListener('click', runProject);
     
-    // ИСПРАВЛЕННЫЙ ОБРАБОТЧИК КНОПКИ НАЗАД
     $('closePreviewBtn').addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
         $('previewOverlay').classList.remove('open');
         consolePanel.close();
     });
+
+    $('previewConsoleBtn').addEventListener('click', () => consolePanel.toggle());
 
     // --- ZIP ГЕНЕРАТОР ---
     const CRC_TABLE = (() => {
@@ -2072,19 +1825,11 @@
     $('closeExportModal').addEventListener('click', closeExportModal);
     exportModal.addEventListener('click', (event) => {
         if (event.target === exportModal) { closeExportModal(); return; }
-
         const option = event.target.closest('[data-export-action]');
         if (!option) return;
-
         const action = option.dataset.exportAction;
-
-        if (!checkCapability(action)) {
-            showUnsupportedToast();
-            return;
-        }
-
+        if (!checkCapability(action)) { showUnsupportedToast(); return; }
         closeExportModal();
-
         if (action === 'download') exportDownload();
         else if (action === 'save-as') exportSaveAs();
         else if (action === 'share') exportShare();
@@ -2225,7 +1970,7 @@
                         <span>${escapeHtml(item.name)}</span>
                     </div>
                     <div class="tree-actions">
-                        <button class="action-icon" data-action="create" aria-label="Создать внутри"><i class="fa-solid fa-plus"></i></button>
+                        <button class="action-icon" data-action="create" aria-label="Создать"><i class="fa-solid fa-plus"></i></button>
                         <button class="action-icon" data-action="rename" aria-label="Переименовать"><i class="fa-solid fa-pen"></i></button>
                         <button class="action-icon delete" data-action="delete" aria-label="Удалить"><i class="fa-solid fa-trash"></i></button>
                     </div>
@@ -2286,7 +2031,7 @@
     let modalParentId = null;
 
     function populateFolderSelect(selectedId = 'root') {
-        parentFolderSelect.innerHTML = '<option value="root">/ (Корень проекта)</option>';
+        parentFolderSelect.innerHTML = '<option value="root">/ (Корень)</option>';
         const traverse = (items, prefix = '') => {
             items.forEach((item) => {
                 if (item.type === 'folder') {
@@ -2336,6 +2081,8 @@
     function closeCreateModal() { createModal.classList.remove('open'); editingItemId = null; }
 
     $('openCreateModal').addEventListener('click', () => openCreateModal('root'));
+    $('navNewBtn').addEventListener('click', () => openCreateModal('root')); // Кнопка + на нижней панели
+    
     $('cancelModal').addEventListener('click', closeCreateModal);
     createModal.addEventListener('click', (event) => { if (event.target === createModal) closeCreateModal(); });
     document.querySelectorAll('.type-btn').forEach((button) => {
@@ -2446,6 +2193,7 @@
     function closeDrawer() { fileDrawer.classList.remove('open'); drawerBackdrop.classList.remove('open'); }
 
     $('openDrawerBtn').addEventListener('click', openDrawer);
+    $('navFilesBtn').addEventListener('click', openDrawer); // Нижняя навигация
     $('closeDrawerBtn').addEventListener('click', closeDrawer);
     drawerBackdrop.addEventListener('click', closeDrawer);
 
@@ -2613,17 +2361,6 @@
             cmView.setValue("");
         }
         hideContextMenu();
-    });
-
-    $('undoBtn').addEventListener('click', () => { if (cmView) { cmView.undo(); cmView.focus(); } });
-    $('redoBtn').addEventListener('click', () => { if (cmView) { cmView.redo(); cmView.focus(); } });
-
-    $('symbolBar').addEventListener('click', (event) => {
-        const button = event.target.closest('.sym-btn');
-        if (!button || !cmView) return;
-        const sym = button.dataset.sym;
-        cmView.replaceSelection(sym);
-        cmView.focus();
     });
 
     let guardPushed = false;
